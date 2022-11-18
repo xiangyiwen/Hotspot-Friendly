@@ -31,20 +31,38 @@ RC txn_man::validate_sler(RC rc) {
     /**
      * Update status.
      */
-    while(!ATOM_CAS(status_latch, false, true))
-        PAUSE
-    // Abort myself actively  [this shouldn't happen]
+//    while(!ATOM_CAS(status_latch, false, true))
+//        PAUSE
+//    // Abort myself actively  [this shouldn't happen]
+//    if(status == ABORTED){
+//        status_latch = false;
+//        abort_process(this);
+//        return Abort;
+//    }
+//    else if(status == RUNNING){
+//        status = validating;
+//    }
+//    else
+//        assert(false);
+//    status_latch = false;
+
+    // Abort myself activelyd
     if(status == ABORTED){
-        status_latch = false;
         abort_process(this);
         return Abort;
     }
     else if(status == RUNNING){
-        status = validating;
+        int i = 0;
+        if(!ATOM_CAS(status, RUNNING, validating)) {
+            abort_process(this);
+            return Abort;
+        }
     }
-    else
-        assert(false);
-    status_latch = false;
+    else {
+        assert(status == ABORTED);
+        abort_process(this);
+        return Abort;
+    }
 
 
     /**
@@ -66,9 +84,9 @@ RC txn_man::validate_sler(RC rc) {
         Version* current_version = (Version*)accesses[rid]->tuple_version;
         if(serial_id <= current_version->begin_ts) {
 
-                if(current_version->begin_ts == UINT64_MAX){
-                    printf("You should wait\n");
-                }
+            if(current_version->begin_ts == UINT64_MAX){
+                printf("You should wait!\n");
+            }
             serial_id = current_version->begin_ts + 1;
         }
 
@@ -90,33 +108,16 @@ RC txn_man::validate_sler(RC rc) {
                 status_t temp_status = newer_version_txn->status;
 
                 if(temp_status == RUNNING){
-                    assert(newer_version->begin_ts == UINT64_MAX);
+                    if(newer_version->begin_ts != UINT64_MAX){
+                        assert(newer_version->retire == nullptr);
+                        min_next_begin = std::min(min_next_begin,newer_version->begin_ts);
+                    }
+                    else{
+                        assert(newer_version->begin_ts == UINT64_MAX);
 
-                    // Record RW dependency
-//                    bool_dep res_dep = PushDependency(newer_version_txn, newer_version_txn->get_sler_txn_id(),DepType::READ_WRITE_);
-//                    if(res_dep == NOT_CONTAIN){
-//                        newer_version_txn->SemaphoreAddOne();
-//
-//                        newer_version_txn->UnionWaitingSet(sler_waiting_set);
-//
-//                        // Update waiting_set
-//                        auto deps = newer_version_txn->sler_dependency;
-//                        for(auto dep_pair :deps){
-//                            txn_man *txn_dep = dep_pair.first;
-//
-//                            txn_dep->UnionWaitingSet(newer_version_txn->sler_waiting_set);
-//                        }
-//                    }
-//                    else if(res_dep == CONTAIN_TXN){
-//                        newer_version_txn->SemaphoreAddOne();
-//                    }
-//                    else{
-//                        assert(res_dep == CONTAIN_TXN_AND_TYPE);
-//                    }
-
-                    // 11-8: Simplize the logic of recording dependency ------------------------
-                    newer_version_txn->SemaphoreAddOne();
-                    PushDependency(newer_version_txn,newer_version_txn->get_sler_txn_id(),DepType::READ_WRITE_);
+                        // Record RW dependency
+                        newer_version_txn->SemaphoreAddOne();
+                        PushDependency(newer_version_txn,newer_version_txn->get_sler_txn_id(),DepType::READ_WRITE_);
 
 //                    // Update waiting set
 //                    newer_version_txn->UnionWaitingSet(sler_waiting_set);
@@ -128,8 +129,8 @@ RC txn_man::validate_sler(RC rc) {
 //
 //                        txn_dep->UnionWaitingSet(newer_version_txn->sler_waiting_set);
 //                    }
-                    // 11-8 ---------------------------------------------------------------------
-
+                        // 11-8 ---------------------------------------------------------------------
+                    }
                 }
                 else if(temp_status == writing || temp_status == committing || temp_status == COMMITED){
                     // Treat next tuple version as committed(Do nothing here)
@@ -213,8 +214,7 @@ RC txn_man::validate_sler(RC rc) {
 
          old_version->end_ts = this->sler_serial_id;
          new_version->begin_ts = this->sler_serial_id;
-         assert(new_version->retire == this);
-         new_version->retire = NULL;
+         new_version->retire = nullptr;
 
          accesses[rid]->orig_row->manager->blatch = false;
 //         new_version->version_latch = false;
@@ -263,11 +263,11 @@ RC txn_man::validate_sler(RC rc) {
          uint64_t origin_txn_id = dep_pair.dep_txn_id;
          DepType type = dep_pair.dep_type;
 
-         // only inform the txn which wasn't aborted
-         if(txn_dep->get_sler_txn_id() == origin_txn_id){
+         // only inform the txn which wasn't aborted and really depend on me
+         if(txn_dep->status != ABORTED && txn_dep->get_sler_txn_id() == origin_txn_id ){
 
              // if there is a RW dependency
-             if((type == READ_WRITE_)){
+             if(type == READ_WRITE_){
                  uint64_t origin_serial_ID;
                  uint64_t new_serial_ID;
                  do {
@@ -303,6 +303,22 @@ void txn_man::abort_process(txn_man * txn){
 //        PAUSE
 //        status = ABORTED;
 //    status_latch = false;
+
+    //11-18
+    if(row_cnt == 0){
+       cout << "type: " << accesses[0]->type << endl;
+       Version* newer = (Version*)accesses[0]->tuple_version;
+       newer = newer->prev;
+       if(newer) {
+           cout << "new version: " << newer << endl;
+           cout << "new version(retire txn): " << newer->retire << endl;
+           cout << "new version(retire txn - sler_txn_id): " << newer->retire->sler_txn_id << endl;
+           cout << "new version(retire ID): " << newer->retire_ID << endl;
+           cout << "txn: " << txn << endl;
+           cout << "txn(sler_txn_id): " << txn->sler_txn_id << endl;
+       }
+    }
+
 
     for(int rid = 0; rid < row_cnt; rid++){
         if(accesses[rid]->type == RD){
@@ -346,7 +362,7 @@ void txn_man::abort_process(txn_man * txn){
         new_version->row->free_row();
         _mm_free(new_version->row);
         new_version->row = NULL;
-        new_version->retire = NULL;
+        new_version->retire = nullptr;
 
 //        new_version->version_latch = false;
 

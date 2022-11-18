@@ -140,9 +140,9 @@ ts_t txn_man::get_ts() {
 void txn_man::cleanup(RC rc) {
 #if CC_ALG == SLER
 
+    sler_txn_id = 0;
     sler_serial_id = 0;
     sler_semaphore = 0;
-    sler_txn_id = 0;
     sler_dependency.clear();
     sler_waiting_set.clear();
 
@@ -368,8 +368,9 @@ row_t * txn_man::get_row(row_t * row, access_t type) {
         #endif
     #elif CC_ALG == SLER                // Call get_row to actually access the row
         rc = row->get_row(type, this, accesses[ row_cnt ]->data, accesses[ row_cnt ]);
-        if (rc == Abort)
-          return NULL;
+        if (rc == Abort) {
+            return NULL;
+        }
         accesses[row_cnt]->orig_row = row;
     #else
       rc = row->get_row(type, this, accesses[ row_cnt ]->data, accesses[row_cnt]);
@@ -430,7 +431,7 @@ row_t * txn_man::get_row(row_t * row, access_t type) {
     /**
      * Update txn statistics
      */
-    row_cnt ++;
+    row_cnt++;
     if (type == WR) {
         wr_cnt++;
     }

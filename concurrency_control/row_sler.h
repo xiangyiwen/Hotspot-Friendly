@@ -27,6 +27,9 @@ struct Version {
     Version* prev;
     Version* next;
     txn_man* retire;      // the txn_man of the uncommitted txn which updates the tuple version
+
+    uint64_t retire_ID;     //11-17
+
     row_t* row;
 
     volatile bool 	version_latch;

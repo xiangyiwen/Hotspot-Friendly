@@ -60,7 +60,8 @@ RC thread_t::run() {
 	UInt64 txn_cnt = 0;
 	ts_t txn_starttime = 0;
 
-	while (true) {
+
+    while (true) {
 		ts_t starttime = get_sys_clock();
 		if (WORKLOAD != TEST) {
 			if (_abort_buffer_enable) {
@@ -100,7 +101,9 @@ RC thread_t::run() {
 				}
 			} else {
 				if (rc == RCOK) {
+
 					m_query = query_queue->get_next_query( _thd_id );
+
                     m_query->rerun = false;
 		            m_txn->abort_cnt = 0;
 					assert(m_query);
@@ -128,8 +131,9 @@ RC thread_t::run() {
                 if (unlikely(m_txn->get_ts() == 0))
                     m_txn->set_ts(get_next_ts());
         #elif CC_ALG == SLER
-                uint64_t temp_thread_id = (get_thd_id() >> 32) & 0xffffffff;
-                m_txn->sler_txn_id = temp_thread_id << 32 | (get_sys_clock() & 0xffffffff);
+//                uint64_t temp_thread_id = (get_thd_id() >> 32) & 0xffffffff;
+//                m_txn->sler_txn_id = temp_thread_id << 32 | (get_sys_clock() & 0xffffffff);
+                m_txn->sler_txn_id = (get_thd_id() << 32) | (get_sys_clock() & 0xffffffff);
                 m_txn->status = RUNNING;
                 m_txn->InsertWaitingSet(m_txn->get_sler_txn_id());               // Initialize waiting set
                 assert(m_txn->sler_semaphore == 0);

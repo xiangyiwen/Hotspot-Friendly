@@ -78,6 +78,8 @@ RC Row_sler::access(txn_man * txn, TsType type, row_t * row, Access * access){
              * Deadlock Detection
              */
             assert(retire_txn != txn);
+            assert(version_header->retire_ID == retire_txn->sler_txn_id);          //11-18
+
 
             // [DeadLock]
             if(retire_txn->WaitingSetContains(txn_id)){
@@ -151,10 +153,11 @@ RC Row_sler::access(txn_man * txn, TsType type, row_t * row, Access * access){
         blatch = false;
     }
     else if (type == P_REQ) {
-        assert(version_header->prev == NULL);               // this tuple version is the newest version
+        assert(version_header->prev == nullptr);               // this tuple version is the newest version
 
         //Error Case, should not happen
         if(version_header->end_ts != INF){
+            assert(false);
             blatch = false;
             rc = Abort;
         }
@@ -177,15 +180,26 @@ RC Row_sler::access(txn_man * txn, TsType type, row_t * row, Access * access){
             }
             // uncommitted version
             else{
+                if(retire_txn == txn){
+                    cout << "retire txn ID: " << version_header->retire_ID << endl;
+                    cout << "current txn ID: " << txn->sler_txn_id << endl;
+
+//                    auto te = glob_manager->_all_txns;
+//                    for(int i=0;i<g_thread_cnt;i++){
+//                        cout << te[i] <<endl;
+//                    }
+
+                }
                 assert(retire_txn != txn);
+                assert(version_header->retire_ID == retire_txn->sler_txn_id);          //11-18
 
                 // [DeadLock]
-                if(retire_txn->WaitingSetContains(txn_id)){
+                if(retire_txn->WaitingSetContains(txn_id) && retire_txn->set_abort() == RUNNING){
                     rc = WAIT;
                     blatch = false;
-                    retire_txn->set_abort();
+//                    retire_txn->set_abort();
 
-                    COMPILER_BARRIER
+//                    COMPILER_BARRIER
 
                     return rc;
                 }
@@ -201,29 +215,6 @@ RC Row_sler::access(txn_man * txn, TsType type, row_t * row, Access * access){
                         createNewVersion(txn,access);
                     }
                     else if(temp_status == RUNNING || temp_status == validating || temp_status == writing){       // record dependency
-//                        bool_dep res_dep = retire_txn->PushDependency(txn, txn->get_sler_txn_id(),DepType::WRITE_WRITE_);
-//
-//                        if(res_dep == NOT_CONTAIN){
-//                            // Add semaphore
-//                            txn->SemaphoreAddOne();
-//
-//                            txn->UnionWaitingSet(retire_txn->sler_waiting_set);
-//
-//                            //更新依赖链表中所有事务的 waiting_set
-//                            auto deps = txn->sler_dependency;
-//                            for(auto dep_pair :deps){
-//                                txn_man* txn_dep = dep_pair.first;
-//
-//                                txn_dep->UnionWaitingSet(txn->sler_waiting_set);
-//                            }
-//                        }
-//                        else if(res_dep == CONTAIN_TXN){
-//                            // Add semaphore
-//                            txn->SemaphoreAddOne();
-//                        }
-//                        else{
-//                            assert(res_dep == CONTAIN_TXN_AND_TYPE);
-//                        }
 
                         // 11-8: Simplize the logic of recording dependency ------------------------
                         txn->SemaphoreAddOne();
@@ -474,6 +465,9 @@ void Row_sler::createNewVersion(txn_man * txn, Access * access){
     new_version->begin_ts = INF;
     new_version->end_ts = INF;
     new_version->retire = txn;
+
+    new_version->retire_ID = txn->get_sler_txn_id();        //11-17
+
     new_version->next = version_header;
     new_version->row->copy(version_header->row);
 
@@ -526,6 +520,8 @@ RC Row_sler::access_helper(txn_man * txn, row_t * row, Access * access, Version*
         // uncommitted version
         else{
             assert(retire_txn != txn);
+            assert(temp_version->retire_ID == retire_txn->sler_txn_id);          //11-18
+
 
             // [DeadLock]
             if(retire_txn->WaitingSetContains(txn_id)){

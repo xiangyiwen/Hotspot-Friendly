@@ -298,11 +298,13 @@ class txn_man
             return ABORTED;
         }
         else if(status == RUNNING){
-            ATOM_CAS(status, RUNNING, ABORTED);
-            return status;          // COMMITED or ABORTED
+            if(ATOM_CAS(status, RUNNING, ABORTED))
+                return RUNNING;          // COMMITED or ABORTED
+            else
+                return ABORTED;
         }
-        else{           // Impossible
-            assert(false);
+        else{           // Possible: mis-kill
+//            assert(false);
             return status;
         }
       #else
