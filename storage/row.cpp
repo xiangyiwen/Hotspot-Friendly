@@ -400,12 +400,13 @@ RC row_t::get_row(access_t type, txn_man * txn, row_t *& row, Access * access) {
 //             we can always access a valid version, unless we are aborted
             uint64_t starttime = get_sys_clock();
 
+            // 11-18
             while(rc == WAIT){
                 rc = this->manager->access(txn, ts_type, row, access);
 
                 uint64_t span = get_sys_clock() - starttime;
                 if(span > 1000000){
-                    printf("WAIT    txn_id:%lu,time: %lu\n",txn->sler_txn_id,span);
+                    printf("WAIT txn_id:%lu,time: %lu\n",txn->sler_txn_id,span);
                 }
                 PAUSE
             }
@@ -420,9 +421,10 @@ RC row_t::get_row(access_t type, txn_man * txn, row_t *& row, Access * access) {
 //                PAUSE
 //            }
 
-            // I am aborted by other txn[Bug: already create a new version, but return abort, then the row_cnt won't add 1, the abort() cannot recycle the new created version]
-            // BUG: retire_ID != retire.sler_txn_id
-            // Fixed: add row_cnt in createversion()
+            /* I am aborted by other txn[Bug: already create a new version, but return abort, then the row_cnt won't add 1, the abort() cannot recycle the new created version]
+               BUG: retire_ID != retire.sler_txn_id
+               Fixed: Don't judge whether txn->status == ABORTED, let txn.cpp do that. That won't hurt much performance.
+             */
 //            if(txn->status == ABORTED){
 //                return Abort;
 //            }
@@ -435,14 +437,6 @@ RC row_t::get_row(access_t type, txn_man * txn, row_t *& row, Access * access) {
             row->table = get_table();
             assert(row->get_schema() == this->get_schema());
         }
-//        // 11-18: Fix the bug
-//        if(txn->status == ABORTED){
-//            txn->row_cnt++;
-//            if (type == WR) {
-//                txn->wr_cnt++;
-//            }
-//            return Abort;
-//        }
         return rc;
     #else
         assert(false);
