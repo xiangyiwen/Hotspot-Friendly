@@ -133,9 +133,16 @@ RC thread_t::run() {
         #elif CC_ALG == SLER
 //                uint64_t temp_thread_id = (get_thd_id() >> 32) & 0xffffffff;
 //                m_txn->sler_txn_id = temp_thread_id << 32 | (get_sys_clock() & 0xffffffff);
+                if(m_txn->sler_semaphore !=0){          //11-21
+                    cout << "sler_semaphore: " << m_txn->sler_semaphore << endl;
+                    cout << "status: " << m_txn->status << endl;
+                }
+
                 m_txn->sler_txn_id = (get_thd_id() << 32) | (get_sys_clock() & 0xffffffff);
-                m_txn->status = RUNNING;
                 m_txn->InsertWaitingSet(m_txn->get_sler_txn_id());               // Initialize waiting set
+
+                m_txn->status = RUNNING;
+
                 assert(m_txn->sler_semaphore == 0);
         #endif
 

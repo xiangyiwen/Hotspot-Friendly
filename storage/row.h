@@ -106,7 +106,8 @@ class row_t
     void init_accesses(Access * access);
     Access * txn_access; // only used when row is a local copy
 #endif
-    RC get_row(access_t type, txn_man * txn, row_t *& row, Access *access=NULL);
+//    RC get_row(access_t type, txn_man * txn, row_t *& row, Access * access=NULL);
+    RC get_row(access_t type, txn_man * txn, row_t *& row, Access *& access);
 #if CC_ALG == BAMBOO
     void return_row(BBLockEntry * lock_entry, RC rc);
 #elif CC_ALG == WOUND_WAIT

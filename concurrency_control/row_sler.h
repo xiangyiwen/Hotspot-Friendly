@@ -30,7 +30,7 @@ struct Version {
 
     uint64_t retire_ID;     //11-17
 
-    row_t* row;
+//    row_t* data;
 
     volatile bool 	version_latch;
 
@@ -44,9 +44,9 @@ struct Version {
 class Row_sler {
 public:
     void 			init(row_t * row);
-    RC 				access(txn_man * txn, TsType type, row_t * row, Access * access);
+    RC 				access(txn_man * txn, TsType type, Access *& access);
     Version*        get_version_header(){return this->version_header;}
-    RC              access_helper(txn_man * txn, row_t * row, Access * access,Version* temp_version_);
+//    RC              access_helper(txn_man * txn, Access * access,Version* temp_version_);
 
 //    void            abort_process(txn_man * txn);
 //    void 			write_process(txn_man * txn, uint64_t serial_id, RC rc);

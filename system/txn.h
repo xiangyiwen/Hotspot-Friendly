@@ -161,6 +161,8 @@ class txn_man
 //    };
     // typedef tbb::concurrent_unordered_map<txn_man*, dep_element> Dependency;
 
+//    int write_row_cnt;
+
     struct dep_element{
         txn_man* dep_txn;
         uint64_t dep_txn_id;             // the txn_id of retire_txn, used in writing phase to avoid wrong semaphore--
@@ -169,7 +171,7 @@ class txn_man
     typedef  tbb::concurrent_vector<dep_element> Dependency;
     uint64_t            sler_txn_id;              // we can directly record txn* in retire field, this txn_id is used in waiting_set
     uint64_t            sler_serial_id;
-    atomic<uint64_t>    sler_semaphore;
+    atomic<int>    sler_semaphore;
 //    Dependency          sler_dependency;
     Dependency          sler_dependency;
     bloom_filter        sler_waiting_set;           // Deadlock Detection
@@ -301,7 +303,7 @@ class txn_man
             if(ATOM_CAS(status, RUNNING, ABORTED))
                 return RUNNING;          // COMMITED or ABORTED
             else
-                return ABORTED;
+                return status;
         }
         else{           // Possible: mis-kill
 //            assert(false);

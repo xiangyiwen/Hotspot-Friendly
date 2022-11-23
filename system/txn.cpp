@@ -40,6 +40,7 @@ void txn_man::init(thread_t * h_thd, workload * h_wl, uint64_t thd_id) {
         accesses[i] = NULL;
 
 #if CC_ALG == SLER
+//    write_row_cnt = 0;
     sler_semaphore = 0;
     sler_serial_id = 0;
     status_latch = false;
@@ -150,6 +151,7 @@ void txn_man::cleanup(RC rc) {
     row_cnt = 0;
     wr_cnt = 0;
     insert_cnt = 0;
+//    write_row_cnt = 0;
 
     return;
 
@@ -485,8 +487,7 @@ void txn_man::index_insert(row_t * row, INDEX * index, idx_key_t key) {
 #endif
 }
 
-itemid_t *
-txn_man::index_read(INDEX * index, idx_key_t key, int part_id) {
+itemid_t * txn_man::index_read(INDEX * index, idx_key_t key, int part_id) {
     uint64_t starttime = get_sys_clock();
     itemid_t * item;
     index->index_read(key, item, part_id, get_thd_id());
@@ -494,8 +495,7 @@ txn_man::index_read(INDEX * index, idx_key_t key, int part_id) {
     return item;
 }
 
-void
-txn_man::index_read(INDEX * index, idx_key_t key, int part_id, itemid_t *& item) {
+void txn_man::index_read(INDEX * index, idx_key_t key, int part_id, itemid_t *& item) {
     uint64_t starttime = get_sys_clock();
     index->index_read(key, item, part_id, get_thd_id());
     INC_TMP_STATS(get_thd_id(), time_index, get_sys_clock() - starttime);

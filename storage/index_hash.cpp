@@ -81,8 +81,7 @@ RC IndexHash::index_read(idx_key_t key, itemid_t * &item, int part_id) {
 
 }
 
-RC IndexHash::index_read(idx_key_t key, itemid_t * &item,
-                         int part_id, int thd_id) {
+RC IndexHash::index_read(idx_key_t key, itemid_t * &item, int part_id, int thd_id) {
   uint64_t bkt_idx = hash(key);
   assert(bkt_idx < _bucket_cnt_per_part);
   BucketHeader * cur_bkt = &_buckets[part_id][bkt_idx];
