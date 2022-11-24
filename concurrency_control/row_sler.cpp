@@ -56,12 +56,25 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
     uint64_t txn_id = txn->get_sler_txn_id();
     txn_man* retire_txn;
 
-    while(!ATOM_CAS(blatch, false, true)){
-        PAUSE
-    }
+//    while(!ATOM_CAS(blatch, false, true)){
+//        PAUSE
+//    }
 
     if (type == R_REQ) {
         // Note: should search write set and read set. However, since no record will be accessed twice, we don't have to search these two sets
+
+        // Small optimization for read-intensive workload: if the version_header is a committed version, then read don't have to lock it.
+        Version* temp_version = version_header;
+        if(!temp_version->retire){
+            rc = RCOK;
+
+            access->tuple_version = temp_version;
+            return rc;
+        }
+
+        while(!ATOM_CAS(blatch, false, true)){
+            PAUSE
+        }
 
         while (version_header) {
 
@@ -143,6 +156,9 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
         blatch = false;
     }
     else if (type == P_REQ) {
+        while(!ATOM_CAS(blatch, false, true)){
+            PAUSE
+        }
 
 //        assert(version_header->prev == nullptr);               // this tuple version is the newest version
 
