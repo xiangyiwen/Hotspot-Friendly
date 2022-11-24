@@ -30,7 +30,7 @@ struct Version {
 
     uint64_t retire_ID;     //11-17
 
-//    row_t* data;
+    row_t* data;
 
     volatile bool 	version_latch;
 

@@ -374,6 +374,8 @@ row_t * txn_man::get_row(row_t * row, access_t type) {
             return NULL;
         }
         accesses[row_cnt]->orig_row = row;
+        auto temp_version = (Version*) accesses[row_cnt]->tuple_version;
+        temp_version->data = row;
     #else
       rc = row->get_row(type, this, accesses[ row_cnt ]->data, accesses[row_cnt]);
       if (rc == Abort)
