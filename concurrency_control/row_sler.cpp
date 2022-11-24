@@ -71,6 +71,12 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
             access->tuple_version = temp_version;
             return rc;
         }
+        else {
+            if(temp_version->retire->status == committing || temp_version->retire->status == COMMITED){
+                access->tuple_version = temp_version;
+                return rc;
+            }
+        }
 
         while(!ATOM_CAS(blatch, false, true)){
             PAUSE
@@ -165,9 +171,6 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
         while (version_header) {
 
             assert(version_header->end_ts == INF);
-//            if(version_header->end_ts != INF){
-//                cout << "   Write ERROR -----------" << endl;
-//            }
 
             retire_txn = version_header->retire;
 
