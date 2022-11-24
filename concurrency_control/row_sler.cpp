@@ -66,9 +66,6 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
         while (version_header) {
 
             assert(version_header->end_ts == INF);
-//            if(version_header->end_ts != INF || i>2){
-//                cout << i << "   Read ERROR -----------" << endl;
-//            }
 
             retire_txn = version_header->retire;
 
@@ -85,27 +82,7 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                  * Deadlock Detection
                  */
                 assert(retire_txn != txn);
-//                if(version_header->retire_ID != retire_txn->sler_txn_id){                 //11-21
-//                    cout << endl;
-//                    cout << "ASSERT ERROR-----------------" << endl;
-//                    cout << "retire_txn: " << retire_txn << endl;
-//                    cout << "retire_ID: " << version_header->retire_ID << endl;
-//                    cout << "begin_ts: " << version_header->begin_ts << endl;
-//                    cout << "end_ts: " << version_header->end_ts << endl;
-//
-//                    cout << endl;
-//
-//                    cout << "retire txn: " << version_header->retire << endl;
-//                    cout << "retire_txn.sler_txn_id: " << retire_txn->sler_txn_id << endl;
-//                    cout << "retire_txn.semaphore: " << retire_txn->sler_semaphore << endl;
-//                    cout << "retire_txn.status: " << retire_txn->status << endl;
-//                    cout << "retire_txn.row_cnt: " << retire_txn->row_cnt << endl;
-//                    cout << "ASSERT ERROR-----------------" << endl;
-//                    cout << endl;
-//
-//                }
                 assert(version_header->retire_ID == retire_txn->sler_txn_id);          //11-18
-
 
                 // [DeadLock]
                 if (retire_txn->WaitingSetContains(txn_id) && retire_txn->set_abort() == RUNNING) {

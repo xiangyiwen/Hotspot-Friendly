@@ -182,37 +182,6 @@ RC txn_man::validate_sler(RC rc) {
      ATOM_CAS(status, validating, writing);
      status_latch = false;
 
-    //11-18
-//    if(row_cnt == 0){
-////        assert(wr_cnt == write_row_cnt);
-////        if(write_row_cnt != 0){
-////            cout << "---------------Attention--------------" << endl;
-////            cout << "write_row_cnt: " << write_row_cnt << endl;
-////            cout << "---------------Attention--------------" << endl;
-////        }
-//
-//        Version* current_version = (Version*)accesses[0]->tuple_version;
-//
-//        cout << endl;
-//        cout << "Writing Phase -------" << endl;
-//        cout << "txn: " << this << endl;
-//        cout << "sler_txn_ID: " << sler_txn_id << endl;
-//
-//        cout << "type: " << accesses[0]->type << endl;
-//        if(accesses[0]->type == WR) {
-//            Version *newer = (Version *) accesses[0]->tuple_version;
-////            newer = newer->prev;
-//            if (newer) {
-//                cout << "new version: " << newer << endl;
-//                cout << "new version(retire txn): " << newer->retire << endl;
-//                cout << "new version(retire txn - sler_txn_id): " << newer->retire->sler_txn_id << endl;
-//                cout << "new version(retire ID): " << newer->retire_ID << endl;
-//                cout << "txn: " << this << endl;
-//                cout << "txn(sler_txn_id): " << sler_txn_id << endl;
-//            }
-//        }
-//    }
-
      for(int rid = 0; rid < row_cnt; rid++){
          if(accesses[rid]->type == RD){
              continue;
@@ -227,22 +196,7 @@ RC txn_man::validate_sler(RC rc) {
              PAUSE
          }
 
-//         while (!ATOM_CAS(old_version->version_latch, false, true)){
-//             PAUSE
-//         }
-//         old_version->end_ts = this->sler_serial_id;
-//         old_version->version_latch = false;
-
-//         while (!ATOM_CAS(new_version->version_latch, false, true)){
-//             PAUSE
-//         }
-
-//         assert(new_version->begin_ts = UINT64_MAX && new_version->retire == this);
          assert(new_version->begin_ts == UINT64_MAX && new_version->retire == this);
-
-//         if(accesses[rid]->orig_row->manager->version_header == old_version){
-//             cout << "EROE" << endl;
-//         }
 
          old_version->end_ts = this->sler_serial_id;
          new_version->begin_ts = this->sler_serial_id;
@@ -319,39 +273,6 @@ void txn_man::abort_process(txn_man * txn){
     assert(status == RUNNING || status == ABORTED || status == validating);
     status = ABORTED;
     status_latch = false;
-
-    //11-18
-//    if(row_cnt == 0){
-////        assert(wr_cnt == write_row_cnt);
-////        if(write_row_cnt != 0){
-////            cout << "---------------Attention--------------" << endl;
-////            cout << "write_row_cnt: " << write_row_cnt << endl;
-////            cout << "---------------Attention--------------" << endl;
-////        }
-//
-//       if(accesses[0]->type == WR) {
-//           Version *newer = (Version *) accesses[0]->tuple_version;
-////           newer = newer->prev;
-//           if (newer && newer->retire) {
-//               cout << endl;
-//               cout << "Aborting Phase -------" << endl;
-////               cout << "txn: " << txn << endl;
-////               cout << "sler_txn_ID: " << txn->sler_txn_id << endl;
-//
-//               cout << "type: " << accesses[0]->type << endl;
-//
-//               cout << "new version: " << newer << endl;
-//               cout << "new version(retire txn): " << newer->retire << endl;
-//               cout << "new version(retire txn - sler_txn_id): " << newer->retire->sler_txn_id << endl;
-//               cout << "new version(retire ID): " << newer->retire_ID << endl;
-//               cout << "txn: " << txn << endl;
-//               cout << "txn(sler_txn_id): " << txn->sler_txn_id << endl;
-//
-//               cout << "Aborting Phase -------" << endl;
-//               cout << endl;
-//           }
-//       }
-//    }
 
 
     for(int rid = 0; rid < row_cnt; rid++){
