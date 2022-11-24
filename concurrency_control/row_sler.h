@@ -44,7 +44,7 @@ struct Version {
 class Row_sler {
 public:
     void 			init(row_t * row);
-    RC 				access(txn_man * txn, TsType type, Access *& access);
+    RC 				access(txn_man * txn, TsType type, Access * access);
     Version*        get_version_header(){return this->version_header;}
 //    RC              access_helper(txn_man * txn, Access * access,Version* temp_version_);
 

@@ -171,7 +171,7 @@ class txn_man
     typedef  tbb::concurrent_vector<dep_element> Dependency;
     uint64_t            sler_txn_id;              // we can directly record txn* in retire field, this txn_id is used in waiting_set
     uint64_t            sler_serial_id;
-    atomic<int>    sler_semaphore;
+    atomic<uint64_t>    sler_semaphore;
 //    Dependency          sler_dependency;
     Dependency          sler_dependency;
     bloom_filter        sler_waiting_set;           // Deadlock Detection
