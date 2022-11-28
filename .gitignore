@@ -5,7 +5,7 @@
 **.swo
 run_exp.sh
 outputs/*.json
-config.h
+#config.h
 rundb
 cmake-build-debug
 .DS_STORE

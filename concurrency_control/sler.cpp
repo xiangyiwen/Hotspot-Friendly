@@ -71,6 +71,10 @@ RC txn_man::validate_sler(RC rc) {
     uint64_t min_next_begin = UINT64_MAX;
     uint64_t serial_id = 0;
 
+    // separate write set from accesses       11-28
+    int write_set[wr_cnt];
+    int cur_wr_idx = 0;
+
     for(int rid = 0; rid < row_cnt; rid++){
 
         // Caculate serial_ID
@@ -90,6 +94,7 @@ RC txn_man::validate_sler(RC rc) {
         }
 
         if(accesses[rid]->type == WR){
+            write_set[cur_wr_idx ++] = rid;         // 11-28
             continue;
         }
 
@@ -182,17 +187,17 @@ RC txn_man::validate_sler(RC rc) {
      ATOM_CAS(status, validating, writing);
      status_latch = false;
 
-     for(int rid = 0; rid < row_cnt; rid++){
-         if(accesses[rid]->type == RD){
-             continue;
-         }
+     for(int rid = 0; rid < wr_cnt; rid++){
+//         if(accesses[rid]->type == RD){
+//             continue;
+//         }
 
          // 11-22: We record new version in read_write_set.
-         Version* new_version = (Version*)accesses[rid]->tuple_version;
+         Version* new_version = (Version*)accesses[write_set[rid]]->tuple_version;
          Version* old_version = new_version->next;
 
 
-         while (!ATOM_CAS(accesses[rid]->orig_row->manager->blatch, false, true)){
+         while (!ATOM_CAS(accesses[write_set[rid]]->orig_row->manager->blatch, false, true)){
              PAUSE
          }
 
@@ -203,7 +208,7 @@ RC txn_man::validate_sler(RC rc) {
          new_version->retire = nullptr;
          new_version->retire_ID = 0;                //11-17
 
-         accesses[rid]->orig_row->manager->blatch = false;
+         accesses[write_set[rid]]->orig_row->manager->blatch = false;
      }
 
 
@@ -274,57 +279,58 @@ void txn_man::abort_process(txn_man * txn){
     status = ABORTED;
     status_latch = false;
 
+    // 11-28
+    if(wr_cnt != 0){
+        for(int rid = 0; rid < row_cnt; rid++){
+            if(accesses[rid]->type == RD){
+                continue;
+            }
 
-    for(int rid = 0; rid < row_cnt; rid++){
-        if(accesses[rid]->type == RD){
-            continue;
-        }
+            // 11-22: We record new version in read_write_set.
+            Version* new_version = (Version*)accesses[rid]->tuple_version;
+            Version* old_version = new_version->next;
 
-        // 11-22: We record new version in read_write_set.
-        Version* new_version = (Version*)accesses[rid]->tuple_version;
-        Version* old_version = new_version->next;
+            while (!ATOM_CAS(accesses[rid]->orig_row->manager->blatch, false, true)){
+                PAUSE
+            }
 
-        while (!ATOM_CAS(accesses[rid]->orig_row->manager->blatch, false, true)){
-            PAUSE
-        }
+            assert(new_version->begin_ts == UINT64_MAX && new_version->retire == this);
 
-        assert(new_version->begin_ts == UINT64_MAX && new_version->retire == this);
+            Version* row_header = accesses[rid]->orig_row->manager->get_version_header();
 
-        Version* row_header = accesses[rid]->orig_row->manager->get_version_header();
+            // new version is the newest version
+            if(new_version == row_header) {
+                if (new_version->prev == NULL) {
+                    accesses[rid]->orig_row->manager->version_header = old_version;
+                    assert(accesses[rid]->orig_row->manager->version_header->end_ts == INF);
 
-        // new version is the newest version
-        if(new_version == row_header) {
-            if (new_version->prev == NULL) {
-                accesses[rid]->orig_row->manager->version_header = old_version;
-                assert(accesses[rid]->orig_row->manager->version_header->end_ts == INF);
+                    assert(old_version->prev == new_version);
+                    old_version->prev = NULL;
+                    new_version->next = NULL;
+                }
+                else{
+                    accesses[rid]->orig_row->manager->version_header = old_version;
+                    assert(accesses[rid]->orig_row->manager->version_header->end_ts == INF);
 
-                assert(old_version->prev == new_version);
-                old_version->prev = NULL;
-                new_version->next = NULL;
+                    assert(old_version->prev == new_version);
+                    old_version->prev = new_version->prev;
+                    new_version->prev->next = old_version;
+
+                    new_version->prev = NULL;
+                    new_version->next = NULL;
+                }
             }
             else{
-                accesses[rid]->orig_row->manager->version_header = old_version;
-                assert(accesses[rid]->orig_row->manager->version_header->end_ts == INF);
-
-                assert(old_version->prev == new_version);
-                old_version->prev = new_version->prev;
-                new_version->prev->next = old_version;
-
+                Version* pre_new = new_version->prev;
+                if(pre_new){
+                    pre_new->next = old_version;
+                }
+                if(old_version->prev == new_version){
+                    old_version->prev = pre_new;
+                }
                 new_version->prev = NULL;
                 new_version->next = NULL;
             }
-        }
-        else{
-            Version* pre_new = new_version->prev;
-            if(pre_new){
-                pre_new->next = old_version;
-            }
-            if(old_version->prev == new_version){
-                old_version->prev = pre_new;
-            }
-            new_version->prev = NULL;
-            new_version->next = NULL;
-        }
 
 
 //        new_version->row->free_row();
@@ -333,16 +339,18 @@ void txn_man::abort_process(txn_man * txn){
 //        _mm_free(new_version->data);
 
 
-        new_version->retire = nullptr;
-        new_version->retire_ID = 0;                //11-17
+            new_version->retire = nullptr;
+            new_version->retire_ID = 0;                //11-17
 
 
-        _mm_free(new_version);
-        new_version = NULL;
+            _mm_free(new_version);
+            new_version = NULL;
 
-        accesses[rid]->orig_row->manager->blatch = false;
+            accesses[rid]->orig_row->manager->blatch = false;
 
+        }
     }
+
 
     /**
      * Cascading abort

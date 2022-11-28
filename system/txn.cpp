@@ -461,8 +461,11 @@ row_t * txn_man::get_row(row_t * row, access_t type) {
     #elif CC_ALG == IC3
         return accesses[row_cnt - 1]->data;
     #elif CC_ALG == SLER
-//        return accesses[row_cnt - 1]->data;
-        return row;
+    //        return accesses[row_cnt - 1]->data;
+    //        return row;
+    auto res_version = (Version*) accesses[row_cnt - 1]->tuple_version;
+    return res_version->data;
+
     #else
       return accesses[row_cnt - 1]->data;
     #endif
