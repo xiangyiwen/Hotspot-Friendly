@@ -80,6 +80,7 @@ private:
 	RC run_order_status(tpcc_query * query);
 	RC run_delivery(tpcc_query * query);
 	RC run_stock_level(tpcc_query * query);
+
 	bool has_local_row(row_t * location, access_t type, row_t * local, access_t local_type) {
 	    if (location == local) {
 	        if ((type == local_type) || (local_type == WR)) {

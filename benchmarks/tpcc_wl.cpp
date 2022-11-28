@@ -88,10 +88,14 @@ RC tpcc_wl::get_txn_man(txn_man *& txn_manager, thread_t * h_thd) {
 }
 
 // TODO ITEM table is assumed to be in partition 0
+/**
+ * Thread 0 will insert all items into partition 0.
+ * item count = g_max_items = 100000. (defined in global.cpp)
+ */
 void tpcc_wl::init_tab_item() {
 	for (UInt32 i = 1; i <= g_max_items; i++) {
 		row_t * row;
-		uint64_t row_id;
+		uint64_t row_id;        // row_id should be never used, because it isn't initialized.
 		t_item->get_new_row(row, 0, row_id);
 		row->set_primary_key(i);
 		row->set_value(I_ID, i);
@@ -111,6 +115,10 @@ void tpcc_wl::init_tab_item() {
 	}
 }
 
+/**
+ * Every thread only insert 1 tuple in WAREHOUSE table.
+ * @param wid : the primary key of the tuple to be inserted
+ */
 void tpcc_wl::init_tab_wh(uint32_t wid) {
 	assert(wid >= 1 && wid <= g_num_wh);
 	row_t * row;
@@ -144,6 +152,12 @@ void tpcc_wl::init_tab_wh(uint32_t wid) {
 	return;
 }
 
+
+/**
+ * Every thread insert 10 tuples in DISTRICT table.
+ * DIST_PER_WARE: 10 (defined in config.h)
+ * @param wid : the corresponding WAREHOUSE id.
+ */
 void tpcc_wl::init_tab_dist(uint64_t wid) {
 	for (uint64_t did = 1; did <= DIST_PER_WARE; did++) {
 		row_t * row;
@@ -179,6 +193,12 @@ void tpcc_wl::init_tab_dist(uint64_t wid) {
 	}
 }
 
+
+/**
+ * Every thread insert 100000 tuples in STOCK table.
+ * g_max_items: 100000 (defined in global.cpp)
+ * @param wid : the corresponding WAREHOUSE id.
+ */
 void tpcc_wl::init_tab_stock(uint64_t wid) {
 	
 	for (UInt32 sid = 1; sid <= g_max_items; sid++) {
@@ -219,6 +239,13 @@ void tpcc_wl::init_tab_stock(uint64_t wid) {
 	}
 }
 
+
+/**
+ * Every thread insert 3000 tuples in CUSTOMER table.
+ * g_cust_per_dist: 3000 (defined in global.cpp)
+ * @param did : the corresponding DISTRICT id.
+ * @param wid : the corresponding WAREHOUSE id.
+ */
 void tpcc_wl::init_tab_cust(uint64_t did, uint64_t wid) {
 	assert(g_cust_per_dist >= 1000);
 	for (UInt32 cid = 1; cid <= g_cust_per_dist; cid++) {
@@ -284,6 +311,11 @@ void tpcc_wl::init_tab_cust(uint64_t did, uint64_t wid) {
 	}
 }
 
+
+/**
+ * The initialization of HISTORY table doesn't call index_insert(), because HISTORY table doesn't have an index.
+ * Insert 1 tuple.
+ */
 void tpcc_wl::init_tab_hist(uint64_t c_id, uint64_t d_id, uint64_t w_id) {
 	row_t * row;
 	uint64_t row_id;
@@ -304,9 +336,16 @@ void tpcc_wl::init_tab_hist(uint64_t c_id, uint64_t d_id, uint64_t w_id) {
 
 }
 
+
+/**
+ * The initialization of ORDER,ORDER_LINE,NEW_ORDER table doesn't call index_insert().
+ * ORDER : Insert g_cust_per_dist(3000) tuples.
+ * ORDER_LINE : Insert o_ol_cnt tuples.(o_ol_cnt is a random number in [5,15])
+ * NEW_ORDER : Insert g_cust_per_dist-2100(900) tuples.
+ */
 void tpcc_wl::init_tab_order(uint64_t did, uint64_t wid) {
 	uint64_t perm[g_cust_per_dist]; 
-	init_permutation(perm, wid); /* initialize permutation of customer numbers */
+	init_permutation(perm, wid);            /* initialize permutation of customer numbers */
 	for (UInt32 oid = 1; oid <= g_cust_per_dist; oid++) {
 		row_t * row;
 		uint64_t row_id;
@@ -324,7 +363,7 @@ void tpcc_wl::init_tab_order(uint64_t did, uint64_t wid) {
 			row->set_value(O_CARRIER_ID, URand(1, 10, wid-1));
 		else 
 			row->set_value(O_CARRIER_ID, 0);
-		o_ol_cnt = URand(5, 15, wid-1);
+		o_ol_cnt = URand(5, 15, wid-1);     // 5-15 order lines in each order
 		row->set_value(O_OL_CNT, o_ol_cnt);
 		row->set_value(O_ALL_LOCAL, 1);
 		
@@ -366,8 +405,12 @@ void tpcc_wl::init_tab_order(uint64_t did, uint64_t wid) {
 | InitPermutation
 +==================================================================*/
 
-void 
-tpcc_wl::init_permutation(uint64_t * perm_c_id, uint64_t wid) {
+/**
+ * Initialize the cid of CUSTOMER table. [Guarantee the cid is not consecutive]
+ * @param perm_c_id : array of customer_id.
+ * @param wid : corresponding WAREHOUSE id.
+ */
+void tpcc_wl::init_permutation(uint64_t * perm_c_id, uint64_t wid) {
 	uint32_t i;
 	// Init with consecutive values
 	for(i = 0; i < g_cust_per_dist; i++) 
@@ -388,6 +431,13 @@ tpcc_wl::init_permutation(uint64_t * perm_c_id, uint64_t wid) {
 | GetPermutation
 +==================================================================*/
 
+/**
+ * Every thread call this function to init the corresponding warehouse.
+ * 1. Only thread 0 will init ITEM table.
+ * 2.
+ * @param This
+ * @return
+ */
 void * tpcc_wl::threadInitWarehouse(void * This) {
 	tpcc_wl * wl = (tpcc_wl *) This;
 	int tid = ATOM_FETCH_ADD(wl->next_tid, 1);
@@ -398,6 +448,7 @@ void * tpcc_wl::threadInitWarehouse(void * This) {
 	
 	if (tid == 0)
 		wl->init_tab_item();
+
 	wl->init_tab_wh( wid );
 	wl->init_tab_dist( wid );
 	wl->init_tab_stock( wid );
@@ -410,6 +461,10 @@ void * tpcc_wl::threadInitWarehouse(void * This) {
 	return NULL;
 }
 
+
+/**
+ * Following functions are helping functions of IC3.
+ */
 #define ADD_SELF_EDGE(tpe, pid) \
   if (k == TPCC_ ## tpe) { \
     sc_graph[i][j][k].txn_type = TPCC_ ## tpe; \

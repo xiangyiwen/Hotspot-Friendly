@@ -10,6 +10,7 @@
 #include "index_btree.h"
 #include "tpcc_const.h"
 
+
 #define RETIRE_ROW(row_cnt) { \
   access_cnt = row_cnt - 1; \
   if (retire_row(access_cnt) == Abort) \
@@ -43,6 +44,12 @@ RC tpcc_txn_man::run_txn(base_query * query) {
   }
 }
 
+/**
+ * 1. Update WAREHOUSE, DISTRICT, CUSTOMER table.
+ * 2. Insert a tuple into HISTORY table.
+ * @param query
+ * @return
+ */
 RC tpcc_txn_man::run_payment(tpcc_query * query) {
 
 #if CC_ALG == BAMBOO && (THREAD_CNT > 1)
@@ -81,8 +88,7 @@ RC tpcc_txn_man::run_payment(tpcc_query * query) {
   /*===================================================================+
       EXEC SQL SELECT w_street_1, w_street_2, w_city, w_state, w_zip, w_name
       INTO :w_street_1, :w_street_2, :w_city, :w_state, :w_zip, :w_name
-      FROM warehouse
-      WHERE w_id=:w_id;
+      FROM warehouse WHERE w_id=:w_id;
   +===================================================================*/
 
   // TODO: for variable length variable (string). Should store the size of
@@ -315,6 +321,14 @@ district_piece:
   return finish(rc);
 }
 
+
+/**
+ * 1. Read WAREHOUSE, DISTRICT, CUSTOMER table.
+ * 2. Insert a tuple in NEW_ORDER, Order table.
+ * 3. Read ol_cnt tuples in ITEM, STOCK table.
+ * @param query
+ * @return
+ */
 RC tpcc_txn_man::run_new_order(tpcc_query * query) {
   RC rc = RCOK;
   uint64_t key;
@@ -831,8 +845,9 @@ orderline_piece: // 7
   return finish(rc);
 }
 
-RC
-tpcc_txn_man::run_order_status(tpcc_query * query) {
+
+
+RC tpcc_txn_man::run_order_status(tpcc_query * query) {
 /*	row_t * r_cust;
 	if (query->by_last_name) {
 		// EXEC SQL SELECT count(c_id) INTO :namecnt FROM customer

@@ -6,6 +6,11 @@
 #include "wl.h"
 #include "table.h"
 
+/**
+ * Generate a tpcc_query.
+ * @param thd_id
+ * @param h_wl
+ */
 void tpcc_query::init(uint64_t thd_id, workload * h_wl) {
   double x = (double)(rand() % 100) / 100.0;
   part_to_access = (uint64_t *)
@@ -23,12 +28,18 @@ void tpcc_query::init(uint64_t thd_id, workload * h_wl) {
     gen_new_order(thd_id);
 }
 
+/**
+ * Initialize a Payment query.
+ * @param thd_id
+ */
 void tpcc_query::gen_payment(uint64_t thd_id) {
   type = TPCC_PAYMENT;
+
   if (FIRST_PART_LOCAL)
     w_id = thd_id % g_num_wh + 1;
   else
     w_id = URand(1, g_num_wh, thd_id % g_num_wh);
+
   d_w_id = w_id;
   uint64_t part_id = wh_to_part(w_id);
   part_to_access[0] = part_id;
@@ -36,8 +47,8 @@ void tpcc_query::gen_payment(uint64_t thd_id) {
 
   d_id = URand(1, DIST_PER_WARE, w_id-1);
   h_amount = URand(1, 5000, w_id-1);
-  int x = URand(1, 100, w_id-1);
-  int y = URand(1, 100, w_id-1);
+  int x = URand(1, 100, w_id-1);            // access home/remote warehouse
+  int y = URand(1, 100, w_id-1);            // select customer by last_name/cust_id
 
 
   if(x <= 85) {
@@ -67,12 +78,20 @@ void tpcc_query::gen_payment(uint64_t thd_id) {
   }
 }
 
+
+
+/**
+ * Initialize a New_Order query.
+ * @param thd_id
+ */
 void tpcc_query::gen_new_order(uint64_t thd_id) {
   type = TPCC_NEW_ORDER;
+
   if (FIRST_PART_LOCAL)
     w_id = thd_id % g_num_wh + 1;
   else
     w_id = URand(1, g_num_wh, thd_id % g_num_wh);
+
   d_id = URand(1, DIST_PER_WARE, w_id-1);
   c_id = NURand(1023, 1, g_cust_per_dist, w_id-1);
   rbk = URand(1, 100, w_id-1);

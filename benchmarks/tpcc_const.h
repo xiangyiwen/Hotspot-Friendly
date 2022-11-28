@@ -1,4 +1,9 @@
-#if TPCC_SMALL 
+/**
+ * These enum variables are used for table initialization.
+ * [ Make the code more readable ]
+ */
+
+#if TPCC_SMALL
 enum {
 	W_ID,
 	W_NAME,

@@ -2,6 +2,10 @@
 #include "global.h"
 #include "helper.h"
 
+/**
+ * Following functions are helper functions: generate a random integer / alphabet_string / number_string...
+ */
+
 uint64_t distKey(uint64_t d_id, uint64_t d_w_id);
 uint64_t custKey(uint64_t c_id, uint64_t c_d_id, uint64_t c_w_id);
 uint64_t orderlineKey(uint64_t w_id, uint64_t d_id, uint64_t o_id);

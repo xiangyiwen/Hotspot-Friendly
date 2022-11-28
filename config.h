@@ -17,7 +17,7 @@
 // # of transactions to run for warmup
 #define WARMUP						50
 // YCSB or TPCC
-#define WORKLOAD                    YCSB
+#define WORKLOAD                    TPCC
 // print the transaction latency distribution
 #define PRT_LAT_DISTR				false
 #define STATS_ENABLE				true
@@ -40,7 +40,7 @@
 /***********************************************/
 // WAIT_DIE, NO_WAIT, DL_DETECT, TIMESTAMP, MVCC, HEKATON, HSTORE, OCC, VLL, TICTOC, SILO, SLER
 // TODO TIMESTAMP does not work at this moment
-#define CC_ALG                      SLER
+#define CC_ALG                      BAMBOO
 #define ISOLATION_LEVEL 			SERIALIZABLE
 
 // latch options
@@ -127,7 +127,7 @@
 /***********************************************/
 #define INSERT_ENABLED              false
 #define THINKTIME				    0
-#define MAX_RUNTIME 10
+#define MAX_RUNTIME                 10
 // max number of rows touched per transaction
 //#define MAX_ROW_PER_TXN             1000
 #define MAX_ROW_PER_TXN             1000
@@ -137,14 +137,14 @@
 //#define MAX_TXN_PER_PART            10000
 #define FIRST_PART_LOCAL 			true
 #define MAX_TUPLE_SIZE				1024 // in bytes
-#define MAX_FIELD_SIZE                          50
+#define MAX_FIELD_SIZE              50
 // ==== [YCSB] ====
 #define INIT_PARALLELISM			40
 // SYNTH_TABLE_SIZE: tuple count of the YCSB table
 //#define SYNTH_TABLE_SIZE 100
-#define SYNTH_TABLE_SIZE 10000000
-#define ZIPF_THETA 0.9
-#define READ_PERC 0.5
+#define SYNTH_TABLE_SIZE            10000000
+#define ZIPF_THETA                  0.9
+#define READ_PERC                   0.5
 #define WRITE_PERC 					0.5  // if want no scan, write + read >= 1
 #define SCAN_PERC 					0
 #define SCAN_LEN					20
@@ -152,11 +152,11 @@
 #define PERC_MULTI_PART				1
 //REQ_PER_QUERY: request count of a txn
 #define REQ_PER_QUERY               15
-#define LONG_TXN_RATIO 0
+#define LONG_TXN_RATIO              0
 #define LONG_TXN_READ_RATIO			0.5
 #define FIELD_PER_TUPLE				10
 // ==== [YCSB-synthetic] ====
-#define SYNTHETIC_YCSB false
+#define SYNTHETIC_YCSB              false
 #define POS_HS                      TOP
 #define SPECIFIED_RATIO             0
 #define FLIP_RATIO                  0
@@ -169,10 +169,10 @@
 // small tpcc schemas shrink the table size.
 #define TPCC_SMALL					false
 // Some of the transactions read the data but never use them.
-// If TPCC_ACCESS_ALL == fales, then these parts of the transactions
-// are not modeled.
+// If TPCC_ACCESS_ALL == fales, then these parts of the transactions are not modeled.
 #define TPCC_ACCESS_ALL 			false
 #define WH_UPDATE					true
+// NUM_WH: define the warehouse count
 #define NUM_WH 						1
 //
 enum TPCCTxnType {
