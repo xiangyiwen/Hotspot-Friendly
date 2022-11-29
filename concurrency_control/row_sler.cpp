@@ -64,19 +64,37 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
         // Note: should search write set and read set. However, since no record will be accessed twice, we don't have to search these two sets
 
         // Small optimization for read-intensive workload: if the version_header is a committed version, then read don't have to lock it.
+//        Version* temp_version = version_header;
+//        if(!temp_version->retire){
+//            rc = RCOK;
+//
+//            access->tuple_version = temp_version;
+//            return rc;
+//        }
+//        else {
+//            // 11-29 : [BUG] retire my be NULL
+//            if(temp_version->retire->status == committing || temp_version->retire->status == COMMITED){
+//                access->tuple_version = temp_version;
+//                return rc;
+//            }
+//        }
+
         Version* temp_version = version_header;
-        if(!temp_version->retire){
+        auto temp_retire_txn = temp_version->retire;
+        if(!temp_retire_txn){           // committed version
             rc = RCOK;
 
             access->tuple_version = temp_version;
             return rc;
         }
-        else {
-            if(temp_version->retire->status == committing || temp_version->retire->status == COMMITED){
+        else{           //uncommitted version
+            if(temp_retire_txn->status == committing || temp_retire_txn->status == COMMITED){
                 access->tuple_version = temp_version;
                 return rc;
             }
         }
+
+
 
         while(!ATOM_CAS(blatch, false, true)){
             PAUSE
