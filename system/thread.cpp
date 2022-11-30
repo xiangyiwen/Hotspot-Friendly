@@ -99,9 +99,9 @@ RC thread_t::run() {
 					if (m_query)
 						break;
 				}
-			} else {
-				if (rc == RCOK) {
-
+			}
+            else {
+				if (rc == RCOK || rc == ERROR) {           // 11-29: Make TPC-C available for SLER.
 					m_query = query_queue->get_next_query( _thd_id );
 
                     m_query->rerun = false;
