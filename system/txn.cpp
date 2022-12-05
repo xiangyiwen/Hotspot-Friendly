@@ -247,6 +247,10 @@ void txn_man::cleanup(RC rc) {
         dl_detector.clear_dep(get_txn_id());
     #endif
 
+    #if CC_ALG == BAMBOO                // 12-5: make BamBoo support TEST workload
+        commit_barriers = 0;
+    #endif
+
 #endif
 }
 
