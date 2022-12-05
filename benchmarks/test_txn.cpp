@@ -25,31 +25,37 @@ RC TestTxnMan::testReadwrite(int access_num) {
 	m_item = index_read(_wl->the_index, 0, 0);
 	row_t * row = ((row_t *)m_item->location);
 	row_t * row_local = get_row(row, WR);
-	if (access_num == 0) {			
-		char str[] = "hello";
-		row_local->set_value(0, 1234);
-		row_local->set_value(1, 1234.5);
-		row_local->set_value(2, 8589934592UL);
-		row_local->set_value(3, str);
-	} else {
-		int v1;
-    	double v2;
-    	uint64_t v3;
-    	
-		row_local->get_value(0, v1);
-	    row_local->get_value(1, v2);
-    	row_local->get_value(2, v3);
+    if(row_local == NULL){          // Make pessimistic CC available for TEST(READ_WRITE) (Compared to OCC,pessimistic CC may return NULL in Read Phase)   12-5
+        rc = Abort;
+    }
+    else {
+        if (access_num == 0) {
+            char str[] = "hello";
+            row_local->set_value(0, 1234);
+            row_local->set_value(1, 1234.5);
+            row_local->set_value(2, 8589934592UL);
+            row_local->set_value(3, str);
+        } else {
+            int v1;
+            double v2;
+            uint64_t v3;
+
+            row_local->get_value(0, v1);
+            row_local->get_value(1, v2);
+            row_local->get_value(2, v3);
 #ifdef NDEBUG
-        row_local->get_value(3);
+            row_local->get_value(3);
 #else
-	    char * v4;
-	    v4 = row_local->get_value(3);
+            char * v4;
+            v4 = row_local->get_value(3);
 #endif
-    	assert(v1 == 1234);
-	    assert(v2 == 1234.5);
-    	assert(v3 == 8589934592UL);
-	    assert(strcmp(v4, "hello") == 0);
-	}
+            assert(v1 == 1234);
+            assert(v2 == 1234.5);
+            assert(v3 == 8589934592UL);
+            assert(strcmp(v4, "hello") == 0);
+        }
+    }
+
 	rc = finish(rc);
 	if (access_num == 0)
 		return RCOK;
