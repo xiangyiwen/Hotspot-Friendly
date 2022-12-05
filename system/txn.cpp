@@ -48,6 +48,16 @@ void txn_man::init(thread_t * h_thd, workload * h_wl, uint64_t thd_id) {
 //    dependency_latch = false;
 //    waiting_set_latch = false;
 //    semaphore_latch = false;
+
+    bloom_parameters parameters;
+    parameters.projected_element_count = 1000;
+    parameters.false_positive_probability = 0.0001;
+
+    parameters.compute_optimal_parameters();
+
+    bloom_filter temp_bloom(parameters);
+    sler_waiting_set = temp_bloom;
+
 #endif
 
     num_accesses_alloc = 0;
@@ -468,6 +478,12 @@ row_t * txn_man::get_row(row_t * row, access_t type) {
     //        return accesses[row_cnt - 1]->data;
     //        return row;
     auto res_version = (Version*) accesses[row_cnt - 1]->tuple_version;
+
+    // DEBUG 12-5
+    if(res_version->data == NULL) {
+        printf("ERROR!\n");
+    }
+
     return res_version->data;
 
     #else
