@@ -64,6 +64,8 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
         // Note: should search write set and read set. However, since no record will be accessed twice, we don't have to search these two sets
 
         // Small optimization for read-intensive workload: if the version_header is a committed version, then read don't have to lock it.
+        // Optimization - v1: [BUG]
+        /*
 //        Version* temp_version = version_header;
 //        if(!temp_version->retire){
 //            rc = RCOK;
@@ -78,9 +80,10 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 //                return rc;
 //            }
 //        }
+         */
 
-
-        //12-12 these code  causes Deadlock, but it doesn't make sense
+        // Optimization - v2: [BUG]'else' branch may cause deadlock or other error, because temp_version may be already aborted and temp_retire_txn has already started another txn and committing/committed, we cannot know whether this temp_version is aborted / committed just through the status of temp_retire_txn.
+        /*
 //        Version* temp_version = version_header;
 //        auto temp_retire_txn = temp_version->retire;
 //        if(!temp_retire_txn){           // committed version
@@ -96,18 +99,28 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 //                return rc;
 //            }
 //        }
+         */
 
+        // Optional Optimization - v3:
+        //todo: it sill occasionally causes deadlock(continuous ""You should wait") [Wait to Fix]
+        /*
+//        Version* temp_version = version_header;
+//        auto temp_retire_txn = temp_version->retire;
+//        if(!temp_retire_txn){           // committed version
+//            rc = RCOK;
+//
+//            access->tuple_version = temp_version;
+//            return rc;
+//        }
+         */
 
 
         while(!ATOM_CAS(blatch, false, true)){
             PAUSE
         }
 
-        int i = 0;
         while (version_header ) {
-
             assert(version_header->end_ts == INF);
-
 
             retire_txn = version_header->retire;
 
@@ -129,16 +142,17 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 
                 // [DeadLock]
                 if (retire_txn->WaitingSetContains(txn_id) && retire_txn->set_abort() == RUNNING) {
-//
-//                    // 12-5 DEBUG
+
+                    // 12-5 DEBUG
+                    /*
 //                    auto dep_size = txn->sler_dependency.size();
 //                    uint64_t temp_sem = retire_txn->sler_semaphore;
-////                    assert(dep_size != 0 && temp_sem != 0);
+//                    assert(dep_size != 0 && temp_sem != 0);
+                    */
 
                     version_header = version_header->next;         //11-22
 
                     assert(version_header->end_ts == INF && retire_txn->status == ABORTED);
-                    i++;
                     continue;
                 }
                 // [No Deadlock]
@@ -158,9 +172,8 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 
                         // 11-8: Simplize the logic of recording dependency ------------------------
                         txn->SemaphoreAddOne();
-                        //12-6 Debug
-                        txn->PushWaitList(retire_txn,retire_txn->get_sler_txn_id(),DepType::WRITE_READ_);
-
+//                        //12-6 Debug
+//                        txn->PushWaitList(retire_txn,retire_txn->get_sler_txn_id(),DepType::WRITE_READ_);
                         retire_txn->PushDependency(txn, txn->get_sler_txn_id(), DepType::WRITE_READ_);
 
                         // Update waiting set
@@ -168,10 +181,7 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 
                         //更新依赖链表中所有事务的 waiting_set
                         auto deps = txn->sler_dependency;
-                        int debug_i =0 ;
                         for (auto & dep_pair: txn->sler_dependency) {
-//                            txn_man *txn_dep = dep_pair.dep_txn;
-//                            uint64_t origin_txn_id = dep_pair.dep_txn_id;
                             while (!dep_pair.dep_type){                    // we may get an element before it being initialized(empty data / wrong data)
                                 break;
                             }
@@ -180,7 +190,6 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                             if(dep_pair.dep_txn->get_sler_txn_id() == dep_pair.dep_txn_id) {           // Don't inform the txn_manager who is already running a new txn.
                                 dep_pair.dep_txn->UnionWaitingSet(txn->sler_waiting_set);
                             }
-                            debug_i++;
                         }
                         // 11-8 ---------------------------------------------------------------------
 
@@ -188,6 +197,8 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                         access->tuple_version = version_header;
                         break;
 
+                        // 12-5 Optional Optimization: Twice check the deadlock, alleviate the cost of aborting a txn.(the earlier we detect a deadlock, the less resources we'll waste on aborting a txn)
+                        /*
 //                        // 12-5 DEBUG
 //                        auto txn_dep_size = txn->sler_dependency.size();
 //                        uint64_t temp_sem = retire_txn->sler_semaphore;
@@ -250,12 +261,12 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 //                            access->tuple_version = version_header;
 //                            break;
 //                        }
+                        */
 
                     } else if (temp_status == ABORTED) {
 
                         version_header = version_header->next;
                         assert(version_header->end_ts == INF && retire_txn->status == ABORTED);
-                        i++;
                         continue;
                     }
                 }
@@ -276,13 +287,8 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 
 //        assert(version_header->prev == nullptr);               // this tuple version is the newest version
 
-        int i = 0;
         while (version_header) {
-
-//            assert(version_header->end_ts == INF);
-            if(version_header->end_ts != INF){      //12-6 Debug
-                assert(i==0);
-            }
+            assert(version_header->end_ts == INF);
 
             retire_txn = version_header->retire;
 
@@ -321,14 +327,15 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                     // [DeadLock]
                     if (retire_txn->WaitingSetContains(txn_id) && retire_txn->set_abort() == RUNNING) {
 
-//                        // 12-5 DEBUG
-//                        auto dep_size = txn->sler_dependency.size();
-//                        uint64_t temp_sem = retire_txn->sler_semaphore;
-////                        assert(dep_size != 0 && temp_sem != 0);
+                        // 12-5 DEBUG
+                        /*
+    //                    auto dep_size = txn->sler_dependency.size();
+    //                    uint64_t temp_sem = retire_txn->sler_semaphore;
+    //                    assert(dep_size != 0 && temp_sem != 0);
+                        */
 
                         version_header = version_header->next;
                         assert(version_header->end_ts == INF && retire_txn->status == ABORTED);
-                        i++;
                         continue;
                     }
                     // [No Deadlock]
@@ -345,7 +352,8 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                             break;
                         } else if (temp_status == RUNNING || temp_status == validating || temp_status == writing) {       // record dependency
 
-//                            // 12-5 DEBUG
+                            // 12-5 DEBUG
+                            /*
 //                            auto txn_dep_size = txn->sler_dependency.size();
 //                            uint64_t temp_sem = retire_txn->sler_semaphore;
 //                            if(txn_dep_size !=0 || temp_sem != 0){
@@ -354,12 +362,12 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 //                                auto res = retire_txn->WaitingSetContains(txn_id);
 //                                printf("Write ERROR\n");
 //                            }
+                            */
 
                             // 11-8: Simplize the logic of recording dependency ------------------------
                             txn->SemaphoreAddOne();
                             //12-6 Debug
-                            txn->PushWaitList(retire_txn,retire_txn->get_sler_txn_id(),DepType::WRITE_WRITE_);
-
+//                            txn->PushWaitList(retire_txn,retire_txn->get_sler_txn_id(),DepType::WRITE_WRITE_);
                             retire_txn->PushDependency(txn, txn->get_sler_txn_id(), DepType::WRITE_WRITE_);
 
                             // Update waiting set
@@ -367,10 +375,7 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 
                             //更新依赖链表中所有事务的 waiting_set
                             auto deps = txn->sler_dependency;
-                            int debug_i =0 ;
                             for (auto & dep_pair: txn->sler_dependency) {
-//                                txn_man *txn_dep = dep_pair.dep_txn;
-//                                uint64_t origin_txn_id = dep_pair.dep_txn_id;
                                 while (!dep_pair.dep_type){                    // we may get an element before it being initialized(empty data / wrong data)
                                     break;
                                 }
@@ -380,7 +385,6 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                                 if(dep_pair.dep_txn->get_sler_txn_id() == dep_pair.dep_txn_id) {           // Don't inform the txn_manager who is already running a new txn.
                                     dep_pair.dep_txn->UnionWaitingSet(txn->sler_waiting_set);
                                 }
-                                debug_i++;
                             }
                             // 11-8 ---------------------------------------------------------------------
 
@@ -388,6 +392,8 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                             createNewVersion(txn, access);
                             break;
 
+                            // 12-5 Optional Optimization: Twice check the deadlock, alleviate the cost of aborting a txn.(the earlier we detect a deadlock, the less resources we'll waste on aborting a txn)
+                            /*
 //                            // 12-5 TRY
 //                            if(retire_txn->WaitingSetContains(txn_id) && retire_txn->set_abort() == RUNNING ){
 //                                version_header = version_header->next;         //11-22
@@ -444,13 +450,12 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 //                                createNewVersion(txn, access);
 //                                break;
 //                            }
+                            */
 
 
                         } else if (temp_status == ABORTED) {
-
                             version_header = version_header->next;
                             assert(version_header->end_ts == INF && retire_txn->status == ABORTED);
-                            i++;
                             continue;
                         }
                     }

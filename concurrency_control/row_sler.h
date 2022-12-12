@@ -25,8 +25,8 @@ class txn_man;
  * Version Format in SLER
  */
 struct Version {
-    uint64_t begin_ts;
-    uint64_t end_ts;
+    ts_t begin_ts;
+    ts_t end_ts;
     Version* prev;
     Version* next;
     txn_man* retire;      // the txn_man of the uncommitted txn which updates the tuple version
