@@ -41,6 +41,10 @@ void txn_man::init(thread_t * h_thd, workload * h_wl, uint64_t thd_id) {
 
 #if CC_ALG == SLER
 //    write_row_cnt = 0;
+    //12-6
+    uncommitted_cnt = 0;
+    dependency_cnt = 0;
+
     sler_semaphore = 0;
     sler_serial_id = 0;
     status_latch = false;
@@ -49,9 +53,12 @@ void txn_man::init(thread_t * h_thd, workload * h_wl, uint64_t thd_id) {
 //    waiting_set_latch = false;
 //    semaphore_latch = false;
 
+    //12-12
+//    sler_dependency = new tbb::concurrent_vector<dep_element>();
+
     bloom_parameters parameters;
-    parameters.projected_element_count = 1000;
-    parameters.false_positive_probability = 0.0001;
+    parameters.projected_element_count = 5;
+    parameters.false_positive_probability = 0.05;
 
     parameters.compute_optimal_parameters();
 
@@ -151,10 +158,39 @@ ts_t txn_man::get_ts() {
 void txn_man::cleanup(RC rc) {
 #if CC_ALG == SLER
 
+    // 12-6
+    uncommitted_cnt = 0;
+    dependency_cnt = 0;
+    dep_debug.clear();
+    wait_list.clear();
+    num_accesses_alloc = 0;
+
+
     sler_txn_id = 0;
     sler_serial_id = 0;
     sler_semaphore = 0;
+
+//    auto before_address = sler_dependency;
+//    for(auto & i : sler_dependency) {
+//        i.dep_type = INVALID;
+//    }
     sler_dependency.clear();
+//    sler_dependency.shrink_to_fit();          // may cause retrieving an uninitialized element(eg. Read_Write),shouldn't call it
+//    auto middle_address = new tbb::concurrent_vector<dep_element>();
+//    delete sler_dependency;
+//    sler_dependency = middle_address;
+//    auto after_address = sler_dependency;
+//    assert(before_address != after_address);
+
+
+//    for(int i = 0; i < sler_dependency.size(); i++) {
+//        sler_dependency[i].dep_type = WRONG;
+//    }
+//
+//    sler_dependency.clear();
+//    sler_dependency.shrink_to_fit();
+
+
     sler_waiting_set.clear();
 
 
@@ -384,6 +420,8 @@ row_t * txn_man::get_row(row_t * row, access_t type) {
         #endif
     #elif CC_ALG == SLER                // Call get_row to actually access the row
         rc = row->get_row(type, this, accesses[ row_cnt ]->data, accesses[ row_cnt ]);
+        accesses[row_cnt]->orig_row = row;
+
         if (rc == Abort) {
             return NULL;
         }

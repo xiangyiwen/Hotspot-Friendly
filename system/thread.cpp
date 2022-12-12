@@ -142,8 +142,10 @@ RC thread_t::run() {
                 m_txn->InsertWaitingSet(m_txn->get_sler_txn_id());               // Initialize waiting set
 
                 m_txn->status = RUNNING;
+//                m_txn->sler_dependency.clear();
 
-                assert(m_txn->sler_semaphore == 0);
+//                assert(m_txn->sler_semaphore == 0);
+                assert(m_txn->sler_dependency.empty());
         #endif
 
 		m_txn->set_txn_id(get_thd_id() + thd_txn_id * g_thread_cnt);

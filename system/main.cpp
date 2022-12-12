@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
 		case TPCC :
 			m_wl = new tpcc_wl; break;
 		case TEST :
-			m_wl = new TestWorkload; 
+			m_wl = new TestWorkload;
 			((TestWorkload *)m_wl)->tick();
 			break;
 		default:
@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
 	}
 	m_wl->init();
 	printf("workload initialized!\n");
-	
+
 	uint64_t thd_cnt = g_thread_cnt;
 	pthread_t p_thds[thd_cnt - 1];
 	m_thds = new thread_t * [thd_cnt];
@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
 	vll_man.init();
 #endif
 
-	for (uint32_t i = 0; i < thd_cnt; i++) 
+	for (uint32_t i = 0; i < thd_cnt; i++)
 		m_thds[i]->init(i, m_wl);
 
 	if (WARMUP > 0){
@@ -116,10 +116,10 @@ int main(int argc, char* argv[])
 		pthread_create(&p_thds[i], NULL, f, (void *)vid);
 	}
 	f((void *)(thd_cnt - 1));
-	for (uint32_t i = 0; i < thd_cnt - 1; i++) 
+	for (uint32_t i = 0; i < thd_cnt - 1; i++)
 		pthread_join(p_thds[i], NULL);
 	int64_t endtime = get_server_clock();
-	
+
 	if (WORKLOAD != TEST) {
 		printf("PASS! SimTime = %ld\n", endtime - starttime);
 		if (STATS_ENABLE)

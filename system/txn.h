@@ -4,7 +4,7 @@
 #include "bloom_filter.h"
 #include <unordered_map>
 #include "tbb/tbb.h"
-
+#include <memory>
 
 class workload;
 class thread_t;
@@ -168,13 +168,22 @@ class txn_man
         uint64_t dep_txn_id;             // the txn_id of retire_txn, used in writing phase to avoid wrong semaphore--
         DepType dep_type;
     };
-    typedef  tbb::concurrent_vector<dep_element> Dependency;
+    typedef  tbb::concurrent_vector<dep_element> Dependency;   //12-12
+//    typedef tbb::concurrent_vector<dep_element> * Dependency;
     uint64_t            sler_txn_id;              // we can directly record txn* in retire field, this txn_id is used in waiting_set
     uint64_t            sler_serial_id;
     atomic<uint64_t>    sler_semaphore;
-//    Dependency          sler_dependency;
+    //12-6 DEBUG
+    int                 uncommitted_cnt;
+    atomic<int>                 dependency_cnt;
+    vector<dep_element> dep_debug;
+//    int           sler_serial_id;
+
     Dependency          sler_dependency;
     bloom_filter        sler_waiting_set;           // Deadlock Detection
+
+    // 12- 6 DEBUG
+    vector<dep_element> wait_list;
 
 
     //WriteSet            sler_write_set;           // since no tuple will be accessed twice in YCSB, we don't need it right now
@@ -376,8 +385,26 @@ class txn_man
 //    }
 
     void PushDependency(txn_man *dep_txn, uint64_t dep_txn_id,DepType depType) {
+        //12-6
+        dependency_cnt ++;
+
+//        COMPILER_BARRIER;
+
         dep_element temp_element = {dep_txn,dep_txn_id,depType};
         sler_dependency.push_back(temp_element);
+    }
+
+    void PushDependency(DepType depType, txn_man * insert_txn , uint64_t insert_txn_id) {
+        dep_element temp_element = {insert_txn,insert_txn_id,depType};
+//        sler_dependency.push_back(temp_element);
+
+        //12-6
+        dep_debug.push_back(temp_element);
+    }
+
+    void PushWaitList(txn_man *wait_txn, uint64_t wait_txn_id,DepType waitType) {
+        dep_element temp_element = {wait_txn,wait_txn_id,waitType};
+        wait_list.push_back(temp_element);
     }
 
     /* Helper Functions for waiting_set */
@@ -397,6 +424,9 @@ class txn_man
     }
 
     void SemaphoreAddOne() {
+        //12-6
+        uncommitted_cnt++;
+
         sler_semaphore++;
         //Equal to semaphore.fetch_add(1);
     }

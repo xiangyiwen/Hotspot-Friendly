@@ -37,7 +37,7 @@ void Row_sler::init(row_t *row){
     version_header->next = NULL;
     version_header->retire = NULL;
     version_header->retire_ID = 0;          //11-17
-    version_header->version_latch = false;
+//    version_header->version_latch = false;
 
     blatch = false;
 }
@@ -79,20 +79,23 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 //            }
 //        }
 
-        Version* temp_version = version_header;
-        auto temp_retire_txn = temp_version->retire;
-        if(!temp_retire_txn){           // committed version
-            rc = RCOK;
 
-            access->tuple_version = temp_version;
-            return rc;
-        }
-        else{           //uncommitted version
-            if(temp_retire_txn->status == committing || temp_retire_txn->status == COMMITED){
-                access->tuple_version = temp_version;
-                return rc;
-            }
-        }
+        //12-12 these code  causes Deadlock, but it doesn't make sense
+//        Version* temp_version = version_header;
+//        auto temp_retire_txn = temp_version->retire;
+//        if(!temp_retire_txn){           // committed version
+//            rc = RCOK;
+//
+//            access->tuple_version = temp_version;
+//            return rc;
+//        }
+//        else{           //uncommitted version
+//            if(temp_retire_txn->status == committing || temp_retire_txn->status == COMMITED){
+//                access->tuple_version = temp_version;
+//                assert(temp_version->begin_ts != UINT64_MAX);   //12-6 Debug
+//                return rc;
+//            }
+//        }
 
 
 
@@ -100,9 +103,11 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
             PAUSE
         }
 
-        while (version_header) {
+        int i = 0;
+        while (version_header ) {
 
             assert(version_header->end_ts == INF);
+
 
             retire_txn = version_header->retire;
 
@@ -111,6 +116,7 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                 rc = RCOK;
 
                 access->tuple_version = version_header;
+                assert(version_header->begin_ts != UINT64_MAX);   //12-6 Debug
                 break;
             }
             // uncommitted version
@@ -123,9 +129,16 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 
                 // [DeadLock]
                 if (retire_txn->WaitingSetContains(txn_id) && retire_txn->set_abort() == RUNNING) {
+//
+//                    // 12-5 DEBUG
+//                    auto dep_size = txn->sler_dependency.size();
+//                    uint64_t temp_sem = retire_txn->sler_semaphore;
+////                    assert(dep_size != 0 && temp_sem != 0);
+
                     version_header = version_header->next;         //11-22
 
                     assert(version_header->end_ts == INF && retire_txn->status == ABORTED);
+                    i++;
                     continue;
                 }
                 // [No Deadlock]
@@ -139,11 +152,15 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                         // which means it can commit only after I finish the operation(blatch is owned by me)
 
                         access->tuple_version = version_header;
+                        assert(version_header->begin_ts != UINT64_MAX);         //12-6 Debug
                         break;
                     } else if (temp_status == RUNNING || temp_status == validating || temp_status == writing) {       // record dependency
 
                         // 11-8: Simplize the logic of recording dependency ------------------------
                         txn->SemaphoreAddOne();
+                        //12-6 Debug
+                        txn->PushWaitList(retire_txn,retire_txn->get_sler_txn_id(),DepType::WRITE_READ_);
+
                         retire_txn->PushDependency(txn, txn->get_sler_txn_id(), DepType::WRITE_READ_);
 
                         // Update waiting set
@@ -151,29 +168,102 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 
                         //更新依赖链表中所有事务的 waiting_set
                         auto deps = txn->sler_dependency;
-                        for (auto dep_pair: deps) {
-                            txn_man *txn_dep = dep_pair.dep_txn;
+                        int debug_i =0 ;
+                        for (auto & dep_pair: txn->sler_dependency) {
+//                            txn_man *txn_dep = dep_pair.dep_txn;
+//                            uint64_t origin_txn_id = dep_pair.dep_txn_id;
+                            while (!dep_pair.dep_type){                    // we may get an element before it being initialized(empty data / wrong data)
+                                break;
+                            }
+                            assert(dep_pair.dep_type != READ_WRITE_);
 
-                            txn_dep->UnionWaitingSet(txn->sler_waiting_set);
+                            if(dep_pair.dep_txn->get_sler_txn_id() == dep_pair.dep_txn_id) {           // Don't inform the txn_manager who is already running a new txn.
+                                dep_pair.dep_txn->UnionWaitingSet(txn->sler_waiting_set);
+                            }
+                            debug_i++;
                         }
                         // 11-8 ---------------------------------------------------------------------
-
 
                         // Record in Access Object
                         access->tuple_version = version_header;
                         break;
+
+//                        // 12-5 DEBUG
+//                        auto txn_dep_size = txn->sler_dependency.size();
+//                        uint64_t temp_sem = retire_txn->sler_semaphore;
+//                        if(txn_dep_size !=0 || temp_sem != 0){
+//                            uint64_t txn_sem = txn->sler_semaphore;
+//                            auto retire_dep_size = retire_txn->sler_dependency.size();
+//                            auto res = retire_txn->WaitingSetContains(txn_id);
+//                            printf("Read ERROR\n");
+//                        }
+
+//                        // 12-5 TRY
+//                        if(retire_txn->WaitingSetContains(txn_id) && retire_txn->set_abort() == RUNNING){
+//                            version_header = version_header->next;         //11-22
+//
+//                            assert(version_header->end_ts == INF && retire_txn->status == ABORTED);
+//                            continue;
+//                        }
+//                        else{
+//                            // 11-8: Simplize the logic of recording dependency ------------------------
+//                            txn->SemaphoreAddOne();
+//                            //12-6 Debug
+//                            txn->PushWaitList(retire_txn,retire_txn->get_sler_txn_id(),DepType::WRITE_READ_);
+//
+//                            retire_txn->PushDependency(txn, txn->get_sler_txn_id(), DepType::WRITE_READ_);
+//
+//                            // Update waiting set
+//                            txn->UnionWaitingSet(retire_txn->sler_waiting_set);
+//
+////                            // retire txn access a tuple I updated(different from current tuple) amd depend on me now [DEADLOCK]
+////                            if(retire_txn->WaitingSetContains(txn_id) && retire_txn->set_abort() == RUNNING){
+////                                txn->SemaphoreSubOne();
+////                                version_header = version_header->next;         //11-22
+////
+////                                assert(version_header->end_ts == INF && retire_txn->status == ABORTED);
+////                                continue;
+////                            }
+//
+//                            //更新依赖链表中所有事务的 waiting_set
+//                            auto deps = txn->sler_dependency;
+//                            for (auto dep_pair: deps) {
+//                                txn_man *txn_dep = dep_pair.dep_txn;
+//                                uint64_t origin_txn_id = dep_pair.dep_txn_id;
+//
+//                                if(txn_dep->get_sler_txn_id() == origin_txn_id) {           // Don't inform the txn_manager who is already running a new txn.
+//                                    txn_dep->UnionWaitingSet(txn->sler_waiting_set);
+//                                }
+//                            }
+//                            // 11-8 ---------------------------------------------------------------------
+//
+//                            // retire txn access a tuple I updated(different from current tuple) and depend on me now [DEADLOCK]
+//                            if(retire_txn->WaitingSetContains(txn_id) && retire_txn->set_abort() == RUNNING){
+//                                txn->SemaphoreSubOne();
+//                                version_header = version_header->next;         //11-22
+//
+//                                assert(version_header->end_ts == INF && retire_txn->status == ABORTED);
+//                                continue;
+//                            }
+//
+//                            // Record in Access Object
+//                            access->tuple_version = version_header;
+//                            break;
+//                        }
+
                     } else if (temp_status == ABORTED) {
 
                         version_header = version_header->next;
                         assert(version_header->end_ts == INF && retire_txn->status == ABORTED);
+                        i++;
                         continue;
                     }
                 }
             }
         }
 
-        if(!version_header){
-            assert(false);
+        if(!version_header ){
+            assert(version_header);
             rc = Abort;
         }
 
@@ -186,9 +276,13 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 
 //        assert(version_header->prev == nullptr);               // this tuple version is the newest version
 
+        int i = 0;
         while (version_header) {
 
-            assert(version_header->end_ts == INF);
+//            assert(version_header->end_ts == INF);
+            if(version_header->end_ts != INF){      //12-6 Debug
+                assert(i==0);
+            }
 
             retire_txn = version_header->retire;
 
@@ -227,8 +321,14 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                     // [DeadLock]
                     if (retire_txn->WaitingSetContains(txn_id) && retire_txn->set_abort() == RUNNING) {
 
+//                        // 12-5 DEBUG
+//                        auto dep_size = txn->sler_dependency.size();
+//                        uint64_t temp_sem = retire_txn->sler_semaphore;
+////                        assert(dep_size != 0 && temp_sem != 0);
+
                         version_header = version_header->next;
                         assert(version_header->end_ts == INF && retire_txn->status == ABORTED);
+                        i++;
                         continue;
                     }
                     // [No Deadlock]
@@ -241,12 +341,25 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 
                             // create new version & record current row in accesses
                             createNewVersion(txn, access);
+                            assert(version_header->begin_ts != UINT64_MAX);         //12-6 Debug
                             break;
-                        } else if (temp_status == RUNNING || temp_status == validating ||
-                                   temp_status == writing) {       // record dependency
+                        } else if (temp_status == RUNNING || temp_status == validating || temp_status == writing) {       // record dependency
+
+//                            // 12-5 DEBUG
+//                            auto txn_dep_size = txn->sler_dependency.size();
+//                            uint64_t temp_sem = retire_txn->sler_semaphore;
+//                            if(txn_dep_size !=0 || temp_sem != 0){
+//                                uint64_t txn_sem = txn->sler_semaphore;
+//                                auto retire_dep_size = retire_txn->sler_dependency.size();
+//                                auto res = retire_txn->WaitingSetContains(txn_id);
+//                                printf("Write ERROR\n");
+//                            }
 
                             // 11-8: Simplize the logic of recording dependency ------------------------
                             txn->SemaphoreAddOne();
+                            //12-6 Debug
+                            txn->PushWaitList(retire_txn,retire_txn->get_sler_txn_id(),DepType::WRITE_WRITE_);
+
                             retire_txn->PushDependency(txn, txn->get_sler_txn_id(), DepType::WRITE_WRITE_);
 
                             // Update waiting set
@@ -254,20 +367,90 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 
                             //更新依赖链表中所有事务的 waiting_set
                             auto deps = txn->sler_dependency;
-                            for (auto dep_pair: deps) {
-                                txn_man *txn_dep = dep_pair.dep_txn;
+                            int debug_i =0 ;
+                            for (auto & dep_pair: txn->sler_dependency) {
+//                                txn_man *txn_dep = dep_pair.dep_txn;
+//                                uint64_t origin_txn_id = dep_pair.dep_txn_id;
+                                while (!dep_pair.dep_type){                    // we may get an element before it being initialized(empty data / wrong data)
+                                    break;
+                                }
+                                assert(dep_pair.dep_type != READ_WRITE_);
 
-                                txn_dep->UnionWaitingSet(txn->sler_waiting_set);
+
+                                if(dep_pair.dep_txn->get_sler_txn_id() == dep_pair.dep_txn_id) {           // Don't inform the txn_manager who is already running a new txn.
+                                    dep_pair.dep_txn->UnionWaitingSet(txn->sler_waiting_set);
+                                }
+                                debug_i++;
                             }
                             // 11-8 ---------------------------------------------------------------------
 
                             // create new version & record current row in accesses
                             createNewVersion(txn, access);
                             break;
+
+//                            // 12-5 TRY
+//                            if(retire_txn->WaitingSetContains(txn_id) && retire_txn->set_abort() == RUNNING ){
+//                                version_header = version_header->next;         //11-22
+//
+//                                assert(version_header->end_ts == INF && retire_txn->status == ABORTED);
+////                                i++;
+//                                continue;
+//                            }
+//                            else {
+//                                // 11-8: Simplize the logic of recording dependency ------------------------
+//                                txn->SemaphoreAddOne();
+//                                //12-6 Debug
+//                                txn->PushWaitList(retire_txn,retire_txn->get_sler_txn_id(),DepType::WRITE_WRITE_);
+//
+//                                retire_txn->PushDependency(txn, txn->get_sler_txn_id(), DepType::WRITE_WRITE_);
+//
+//                                // Update waiting set
+//                                txn->UnionWaitingSet(retire_txn->sler_waiting_set);
+//
+////                                // retire txn access a tuple I updated(different from current tuple) amd depend on me now [DEADLOCK]
+////                                if(retire_txn->WaitingSetContains(txn_id) && retire_txn->set_abort() == RUNNING){
+////                                    txn->SemaphoreSubOne();
+////                                    version_header = version_header->next;         //11-22
+////
+////                                    assert(version_header->end_ts == INF && retire_txn->status == ABORTED);
+////                                    i++;
+////                                    continue;
+////                                }
+//
+//                                //更新依赖链表中所有事务的 waiting_set
+//                                auto deps = txn->sler_dependency;
+//                                for (auto dep_pair: deps) {
+//                                    txn_man *txn_dep = dep_pair.dep_txn;
+//                                    uint64_t origin_txn_id = dep_pair.dep_txn_id;
+//
+//                                    if(txn_dep->get_sler_txn_id() == origin_txn_id) {           // Don't inform the txn_manager who is already running a new txn.
+//                                        txn_dep->UnionWaitingSet(txn->sler_waiting_set);
+//                                    }
+//                                }
+//                                // 11-8 ---------------------------------------------------------------------
+//
+//
+//                                // retire txn access a tuple I updated(different from current tuple) amd depend on me now [DEADLOCK]
+//                                if(retire_txn->WaitingSetContains(txn_id) && retire_txn->set_abort() == RUNNING){
+//                                    txn->SemaphoreSubOne();
+//                                    version_header = version_header->next;         //11-22
+//
+//                                    assert(version_header->end_ts == INF && retire_txn->status == ABORTED);
+////                                    i++;
+//                                    continue;
+//                                }
+//
+//                                // create new version & record current row in accesses
+//                                createNewVersion(txn, access);
+//                                break;
+//                            }
+
+
                         } else if (temp_status == ABORTED) {
 
                             version_header = version_header->next;
                             assert(version_header->end_ts == INF && retire_txn->status == ABORTED);
+                            i++;
                             continue;
                         }
                     }
@@ -276,6 +459,7 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
         }
 
         if(!version_header){
+            assert(version_header);
             rc = Abort;
         }
 
@@ -295,7 +479,7 @@ void Row_sler::createNewVersion(txn_man * txn, Access * access){
 //    new_version->row->init(MAX_TUPLE_SIZE);
 
     new_version->prev = NULL;
-    new_version->version_latch = false;
+//    new_version->version_latch = false;
 
     // set the meta-data of new_version
     new_version->begin_ts = INF;

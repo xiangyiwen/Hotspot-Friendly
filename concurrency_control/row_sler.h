@@ -17,13 +17,16 @@ class txn_man;
 #if CC_ALG == SLER
 
 #define INF UINT64_MAX
+//12-6 Debug
+//#define INF INT32_MAX
+
 
 /**
  * Version Format in SLER
  */
 struct Version {
-    ts_t begin_ts;
-    ts_t end_ts;
+    uint64_t begin_ts;
+    uint64_t end_ts;
     Version* prev;
     Version* next;
     txn_man* retire;      // the txn_man of the uncommitted txn which updates the tuple version
@@ -32,7 +35,7 @@ struct Version {
 
     row_t* data;
 
-    volatile bool 	version_latch;
+//    volatile bool 	version_latch;
 
 //    Version(): begin_ts(0), end_ts(INF),
 //    prev(NULL),next(NULL),

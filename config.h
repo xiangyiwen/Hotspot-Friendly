@@ -5,19 +5,19 @@
 // Simulation + Hardware
 /***********************************************/
 #define TERMINATE_BY_COUNT true
-#define THREAD_CNT                  11
+#define THREAD_CNT                  15
 #define PART_CNT					1
 // each transaction only accesses 1 virtual partition. But the lock/ts manager and index are not aware of such partitioning. VIRTUAL_PART_CNT describes the request distribution and is only used to generate queries. For HSTORE, VIRTUAL_PART_CNT should be the same as PART_CNT.
 #define VIRTUAL_PART_CNT			1
 #define PAGE_SIZE					4096
 #define CL_SIZE						64
 // CPU_FREQ is used to get accurate timing info
-#define CPU_FREQ 					2.6 // in GHz/s
+#define CPU_FREQ 					2 // in GHz/s
 
 // # of transactions to run for warmup
-#define WARMUP						50
+#define WARMUP						1000
 // YCSB or TPCC
-#define WORKLOAD                    TPCC
+#define WORKLOAD                    YCSB
 // print the transaction latency distribution
 #define PRT_LAT_DISTR				false
 #define STATS_ENABLE				true
@@ -38,9 +38,9 @@
 /***********************************************/
 // Concurrency Control
 /***********************************************/
-// WAIT_DIE, NO_WAIT, DL_DETECT, TIMESTAMP, MVCC, HEKATON, HSTORE, OCC, VLL, TICTOC, SILO, SLER
+// WAIT_DIE, NO_WAIT, DL_DETECT, TIMESTAMP, MVCC, HEKATON, HSTORE, OCC, VLL, TICTOC, SILO, SLER , BAMBOO
 // TODO TIMESTAMP does not work at this moment
-#define CC_ALG                      BAMBOO
+#define CC_ALG                      SLER
 #define ISOLATION_LEVEL 			SERIALIZABLE
 
 // latch options
@@ -53,9 +53,9 @@
 // per-row lock/ts management or central lock/ts management
 #define CENTRAL_MAN					false
 #define BUCKET_CNT					31
-#define ABORT_PENALTY 50000
+#define ABORT_PENALTY               50000
 #define ABORT_BUFFER_SIZE			1
-//#define ABORT_BUFFER_ENABLE			true
+// ABORT_BUFFER_ENABLE : All CC need this flag be true except SLER. Otherwise, other CC cannot run TPCC.
 #define ABORT_BUFFER_ENABLE			false
 // [ INDEX ]
 #define ENABLE_LATCH				false
@@ -110,7 +110,7 @@
 // [WW]
 #define WW_STARV_FREE false
 // [IC3]
-#define IC3_EAGER_EXEC              true 
+#define IC3_EAGER_EXEC              true
 #define IC3_RENDEZVOUS              true
 #define IC3_FIELD_LOCKING           false // should not be true
 #define IC3_MODIFIED_TPCC           false
@@ -238,7 +238,7 @@ extern TestCases					g_test_case;
 #define DEBUG_TMP					false
 
 /***********************************************/
-// PROFILING 
+// PROFILING
 /***********************************************/
 #define PF_BASIC true
 #define PF_CS false

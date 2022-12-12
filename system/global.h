@@ -171,6 +171,9 @@ enum DepType {
 //    RW_WW = 5,  /* Binary: 101*/
 //    WR_WW = 6,  /* Binary: 110*/
 //    RW_WR_WW = 7,  /* Binary: 111*/
+    WRONG = 100,
+    WRONG_1 = 200,
+
     READ_READ_
 };
 

@@ -73,7 +73,7 @@ TestTxnMan::testConflict(int access_num)
 	for (key = 0; key < 1; key ++) {
 		m_item = index_read(_wl->the_index, key, 0);
 		row_t * row = ((row_t *)m_item->location);
-		row_t * row_local; 
+		row_t * row_local;
 		row_local = get_row(row, WR);
 		if (row_local) {
 			char str[] = "hello";
