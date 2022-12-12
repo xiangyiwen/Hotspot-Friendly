@@ -13,8 +13,8 @@
 RC txn_man::validate_sler(RC rc) {
     uint64_t starttime = get_sys_clock();
 
-//    //12-5 Debug
-    int temp_sem = sler_semaphore;
+    //12-5 Debug
+//    int temp_sem = sler_semaphore;
 
     while(true){
         // Abort myself actively
@@ -77,14 +77,16 @@ RC txn_man::validate_sler(RC rc) {
         }*/
 
 
-        int dp_size = dependency_cnt;
-        int debug_i =0 ;
+//        int dp_size = dependency_cnt;
+//        int debug_i =0 ;
         //12-6 make sure the workload can finish
         for(auto & dep_pair : sler_dependency) {
-            int debu_i = 0;
             if(!dep_pair.dep_type){               // we may get an element before it being initialized(empty data / wrong data)
                 break;
             }
+
+            // 12-12 Debug: There shouldn't appear READ_WRITE_ dependency.
+            /*
             txn_man *txn_dep = dep_pair.dep_txn;
             uint64_t origin_txn_id = dep_pair.dep_txn_id;
             auto type = dep_pair.dep_type;
@@ -122,41 +124,7 @@ RC txn_man::validate_sler(RC rc) {
                 cout << endl;
                 cout << endl;
             }
-
-/*
-//            auto dep_size= sler_dependency.size();
-//
-////            assert(dependency_cnt == sler_dependency.size());
-//
-//            if(dependency_cnt != sler_dependency.size()){
-//                int now_cnt = dependency_cnt;
-//                cout << "Use auto" << endl;
-//                for(auto & i : sler_dependency){
-//                    cout << sler_txn_id << "dep_txn: " << i.dep_txn << endl;
-//                    cout << sler_txn_id <<  "dep_txn_id: " << i.dep_txn_id << endl;
-//                    cout << sler_txn_id <<  "dep_type: " << i.dep_type << endl;
-//                }
-//                cout << endl;
-//                cout << endl;
-//
-//
-//                cout << "Use for" << endl;
-//                for(auto i = 0;i < sler_dependency.size();i++){
-//                    cout << sler_txn_id <<  "dep_txn: " << sler_dependency[i].dep_txn << endl;
-//                    cout << sler_txn_id <<  "dep_txn_id: " << sler_dependency[i].dep_txn_id << endl;
-//                    cout << sler_txn_id <<  "dep_type: " << sler_dependency[i].dep_type << endl;
-//                }
-//
-//                assert(false);
-//            }
-
-//            assert(dependency_cnt == sler_dependency.size());
-
-//            if(txn_dep->sler_txn_id != origin_txn_id){
-//                auto res = WaitingSetContains(origin_txn_id);
-////                assert(!res);
-//            }
-*/
+            */
 
             // DEADLOCK
             if (WaitingSetContains(dep_pair.dep_txn->sler_txn_id) && dep_pair.dep_txn->WaitingSetContains(sler_txn_id) && dep_pair.dep_txn->status == RUNNING) {
@@ -166,68 +134,24 @@ RC txn_man::validate_sler(RC rc) {
                 abort_process(this);
                 return Abort;
             }
-
-            debug_i++;
         }
 
-//        COMPILER_BARRIER
-
-
+        // Timeout: Make sure the workload can finish.
         uint64_t span = get_sys_clock() - starttime;
         if(span > 10000){
-            // 12-5 DEBUG
-//            auto my_dep_size = sler_dependency.size();
-//            if(my_dep_size) {
-//                auto dep_txn = sler_dependency[my_dep_size - 1];
-//                auto txn_dep = dep_txn.dep_txn;
-//                uint64_t txn_dep_sem = txn_dep->sler_semaphore;
-//                auto txn_dep_size = txn_dep->sler_dependency.size();
-//
-//                auto res_me = WaitingSetContains(txn_dep->sler_txn_id);
-//                auto res_him = txn_dep->WaitingSetContains(sler_txn_id);
-//
-//                if(txn_dep_size) {
-//                    auto his_dep_txn = txn_dep->sler_dependency[txn_dep_size - 1];
-//                }
-//
-//                printf("txn_id:%lu,validate_time: %lu\n",sler_txn_id,span);
-//            }
-//
-//            //12-6 make sure the workload can finish
-//            for(auto dep_pair :sler_dependency){
-//                txn_man *txn_dep = dep_pair.dep_txn;
-//                uint64_t origin_txn_id = dep_pair.dep_txn_id;
-//                DepType type = dep_pair.dep_type;
-//
-//                // DEADLOCK
-//                if(WaitingSetContains(txn_dep->sler_txn_id)){
-//                    if(origin_txn_id == txn_dep->sler_txn_id) {
-//                        txn_dep->set_abort();
-//                    }
-//                    abort_process(this);
-//                    return Abort;
-//                }
-//            }
 
 //            printf("txn_id:%lu,validate_time: %lu\n",sler_txn_id,span);
 
             abort_process(this);
             return Abort;
         }
-
-//        // Abort myself actively
-//        if(status == ABORTED || rc == Abort){
-//            abort_process(this);
-//            return Abort;
-//        }
-//        if(sler_semaphore == 0){
-//            break;
-//        }
     }
+
 
     /**
      * Update status.
      */
+     /*
 //    while(!ATOM_CAS(status_latch, false, true))
 //        PAUSE
 //    // Abort myself actively  [this shouldn't happen]
@@ -242,6 +166,7 @@ RC txn_man::validate_sler(RC rc) {
 //    else
 //        assert(false);
 //    status_latch = false;
+    */
 
     // Abort myself actively
     if(status == ABORTED){
@@ -266,9 +191,6 @@ RC txn_man::validate_sler(RC rc) {
      * Validate the read & write set
      */
     uint64_t min_next_begin = UINT64_MAX;
-//    int min_next_begin = INT32_MAX;
-
-
     uint64_t serial_id = 0;
 
     // separate write set from accesses       11-28
@@ -285,12 +207,65 @@ RC txn_man::validate_sler(RC rc) {
         }
 
         if(serial_id <= current_version->begin_ts) {
-//            int i = 0;
             while(current_version->begin_ts == UINT64_MAX){
-//                if(i) {
-                    cout << sler_txn_id << " You should wait!  " << endl;
-//                }
-//                i++;
+//                cout << sler_txn_id << " You should wait!  " << endl;
+
+                // 12-12 [DEADLOCK FIX]: Since we may subtract the semaphore of a txn too aggressively, the txn may be validated too early. So we have to do one more deadlock check here.
+                for(auto & dep_pair : sler_dependency) {
+                    if(!dep_pair.dep_type){               // we may get an element before it being initialized(empty data / wrong data)
+                        break;
+                    }
+
+                    // 12-12 Debug: There shouldn't appear READ_WRITE_ dependency.
+                    /*
+                    txn_man *txn_dep = dep_pair.dep_txn;
+                    uint64_t origin_txn_id = dep_pair.dep_txn_id;
+                    auto type = dep_pair.dep_type;
+
+                    auto dep_size= sler_dependency.size();
+
+                    if(dep_pair.dep_type == READ_WRITE_){
+                        if(dep_pair.dep_type == READ_WRITE_){
+                            cout << endl << "Auto wrong too." << endl;
+                        }
+                        cout << "First Data." << endl;
+                        cout << txn_dep << endl;
+                        cout << origin_txn_id << endl;
+                        cout << endl;
+
+        //                cout << sler_txn_id <<  "    1: dep_type: " << dep_pair.dep_type << endl;
+        //                cout << sler_txn_id <<  "    2: dep_type: " << dep_pair.dep_type << endl;
+
+                        cout << "Use auto" << endl;
+        //                cout << sler_txn_id <<  "    3: dep_type: " << dep_pair.dep_type << endl;
+
+                        for(auto & i : sler_dependency){
+        //                    cout << sler_txn_id <<  "    4: dep_type: " << dep_pair.dep_type << endl;
+
+                            if(i.dep_type == READ_WRITE_){
+                                cout << endl << "Auto wrong too." << endl;
+                            }
+                            cout << sler_txn_id << "dep_txn: " << i.dep_txn << endl;
+                            cout << sler_txn_id <<  "dep_txn_id: " << i.dep_txn_id << endl;
+                            cout << sler_txn_id <<  "dep_type: " << i.dep_type << endl;
+                        }
+
+        //                cout << sler_txn_id <<  "    5: dep_type: " << dep_pair.dep_type << endl;
+
+                        cout << endl;
+                        cout << endl;
+                    }
+                    */
+
+                    // DEADLOCK
+                    if (WaitingSetContains(dep_pair.dep_txn->sler_txn_id) && dep_pair.dep_txn->WaitingSetContains(sler_txn_id) && dep_pair.dep_txn->status == RUNNING) {
+                        if (dep_pair.dep_txn_id == dep_pair.dep_txn->sler_txn_id) {
+                            dep_pair.dep_txn->set_abort();
+                        }
+                        abort_process(this);
+                        return Abort;
+                    }
+                }
             }
 
             serial_id = current_version->begin_ts + 1;
@@ -324,19 +299,11 @@ RC txn_man::validate_sler(RC rc) {
                         assert(newer_version->begin_ts == UINT64_MAX);
 
                         // Record RW dependency
-//                        uint64_t temp_sem = newer_version_txn->sler_semaphore;
-//                        if(temp_sem != 0){
-//                            auto txn_dep_size = sler_dependency.size();
-//                            auto res = newer_version_txn->WaitingSetContains(sler_txn_id);
-//                            auto res_me = WaitingSetContains(sler_txn_id);
-////                            auto dep_txn = sler_dependency[txn_dep_size - 1];
-//
-//                            printf("May be Wrong here!\n");
-//                        }
 
                         newer_version_txn->SemaphoreAddOne();
                         //12-6 Debug
-                        newer_version_txn->PushWaitList(this,sler_txn_id,DepType::READ_WRITE_);
+                        /*
+//                        newer_version_txn->PushWaitList(this,sler_txn_id,DepType::READ_WRITE_);
 
 //                        PushDependency(DepType::READ_WRITE_,this,sler_txn_id);      //12-6 Debug
 
@@ -348,10 +315,11 @@ RC txn_man::validate_sler(RC rc) {
 
                       //  cout << endl << "!!!!!! dep_txn: " << newer_version_txn << "!!!!! sler_txn_id: " << newer_version_txn->get_sler_txn_id() << endl;
 
+                      */
                         PushDependency(newer_version_txn,newer_version_txn->get_sler_txn_id(),DepType::READ_WRITE_);
 
-
-//                    // Update waiting set
+                    // Update waiting set [We don't have to do that, meaningless]
+                    /*
 //                    newer_version_txn->UnionWaitingSet(sler_waiting_set);
 //
 //                    //更新依赖链表中所有事务的 waiting_set
@@ -362,6 +330,7 @@ RC txn_man::validate_sler(RC rc) {
 //                        txn_dep->UnionWaitingSet(newer_version_txn->sler_waiting_set);
 //                    }
                         // 11-8 ---------------------------------------------------------------------
+                    */
                     }
                 }
                 else if(temp_status == writing || temp_status == committing || temp_status == COMMITED){
@@ -407,7 +376,7 @@ RC txn_man::validate_sler(RC rc) {
      * Writing phase
      */
      this->sler_serial_id = serial_id;
-    assert(this->sler_serial_id != 0);
+     assert(this->sler_serial_id != 0);
 
      // Update status.
      while(!ATOM_CAS(status_latch, false, true))
@@ -417,14 +386,10 @@ RC txn_man::validate_sler(RC rc) {
      status_latch = false;
 
      for(int rid = 0; rid < wr_cnt; rid++){
-//         if(accesses[rid]->type == RD){
-//             continue;
-//         }
 
          // 11-22: We record new version in read_write_set. [Bug: we should first take the lock, otherwise old_version may be a wrong version]
 //         Version* new_version = (Version*)accesses[write_set[rid]]->tuple_version;
 //         Version* old_version = new_version->next;
-
 
          while (!ATOM_CAS(accesses[write_set[rid]]->orig_row->manager->blatch, false, true)){
              PAUSE
@@ -456,15 +421,7 @@ RC txn_man::validate_sler(RC rc) {
      ATOM_CAS(status, writing, committing);
      status_latch = false;
 
-     auto deps = sler_dependency;
-     int debug_i = 0;
-
      for(auto & dep_pair :sler_dependency){
-//         txn_man *txn_dep = dep_pair.dep_txn;
-//         uint64_t origin_txn_id = dep_pair.dep_txn_id;
-//         DepType type = dep_pair.dep_type;
-//
-//         assert(txn_dep == dep_pair.dep_txn);
 
          // only inform the txn which wasn't aborted and really depend on me[status == RUNNING]
 //         while(!ATOM_CAS(txn_dep->status_latch, false, true))
@@ -495,8 +452,6 @@ RC txn_man::validate_sler(RC rc) {
 
          //12-12 [BUG Fixed] Making concurrent_vector correct
          dep_pair.dep_type = INVALID;
-
-        debug_i++;
      }
 
 
@@ -599,18 +554,11 @@ void txn_man::abort_process(txn_man * txn){
     /**
      * Cascading abort
      */
-    auto deps = sler_dependency;
-    int debug_i =0 ;
-
     for(auto & dep_pair :sler_dependency){
-//        txn_man *txn_dep = dep_pair.dep_txn;
-//        uint64_t origin_txn_id = dep_pair.dep_txn_id;
-//        DepType type = dep_pair.dep_type;
 
         // only inform the txn which wasn't aborted
         if(dep_pair.dep_txn->get_sler_txn_id() == dep_pair.dep_txn_id && dep_pair.dep_txn->status == RUNNING){
             if((dep_pair.dep_type == WRITE_WRITE_) || (dep_pair.dep_type == WRITE_READ_)){
-//                assert(txn_dep->status == RUNNING || txn_dep->status == ABORTED);
                 dep_pair.dep_txn->set_abort(true);
             }
             else{           //[Fix BUG: 2 threads + 15 ops] Have to release the semaphore of txns who READ_WRITE_ depend on me, otherwise they can never commit and causes deadlock.
@@ -623,8 +571,6 @@ void txn_man::abort_process(txn_man * txn){
 
         //12-12 [BUG Fixed] Making concurrent_vector correct
         dep_pair.dep_type = INVALID;
-
-        debug_i++;
     }
 
 //    while(!ATOM_CAS(status_latch, false, true))
