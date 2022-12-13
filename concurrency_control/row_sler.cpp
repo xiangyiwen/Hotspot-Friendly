@@ -182,7 +182,7 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                         //更新依赖链表中所有事务的 waiting_set
                         auto deps = txn->sler_dependency;
                         for (auto & dep_pair: txn->sler_dependency) {
-                            while (!dep_pair.dep_type){                    // we may get an element before it being initialized(empty data / wrong data)
+                            if (!dep_pair.dep_type){                    // we may get an element before it being initialized(empty data / wrong data)
                                 break;
                             }
                             assert(dep_pair.dep_type != READ_WRITE_);
@@ -348,7 +348,7 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 
                             // create new version & record current row in accesses
                             createNewVersion(txn, access);
-                            assert(version_header->begin_ts != UINT64_MAX);         //12-6 Debug
+//                            assert(version_header->begin_ts != UINT64_MAX);         //12-6 Debug
                             break;
                         } else if (temp_status == RUNNING || temp_status == validating || temp_status == writing) {       // record dependency
 
@@ -376,7 +376,7 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                             //更新依赖链表中所有事务的 waiting_set
                             auto deps = txn->sler_dependency;
                             for (auto & dep_pair: txn->sler_dependency) {
-                                while (!dep_pair.dep_type){                    // we may get an element before it being initialized(empty data / wrong data)
+                                if (!dep_pair.dep_type){                    // we may get an element before it being initialized(empty data / wrong data)
                                     break;
                                 }
                                 assert(dep_pair.dep_type != READ_WRITE_);
