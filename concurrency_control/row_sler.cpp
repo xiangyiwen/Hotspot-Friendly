@@ -103,16 +103,23 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 
         // Optional Optimization - v3:
         //todo: it sill occasionally causes deadlock(continuous ""You should wait") [Wait to Fix]
-        /*
-//        Version* temp_version = version_header;
-//        auto temp_retire_txn = temp_version->retire;
-//        if(!temp_retire_txn){           // committed version
-//            rc = RCOK;
-//
-//            access->tuple_version = temp_version;
-//            return rc;
-//        }
-         */
+//        /*
+        Version* temp_version = version_header;
+        auto temp_retire_txn = temp_version->retire;
+        if(!temp_retire_txn){           // committed version
+            rc = RCOK;
+
+            access->tuple_version = temp_version;
+            return rc;
+        }
+        else{           //uncommitted version
+            if(temp_retire_txn->status == committing || temp_retire_txn->status == COMMITED){
+                access->tuple_version = temp_version;
+                assert(temp_version->begin_ts != UINT64_MAX);   //12-6 Debug
+                return rc;
+            }
+        }
+//         */
 
 
         while(!ATOM_CAS(blatch, false, true)){
