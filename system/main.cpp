@@ -126,6 +126,13 @@ int main(int argc, char* argv[])
 			stats.print();
 	} else {
 		((TestWorkload *)m_wl)->summarize();
+
+        // 12-13 Test: SLER has much lower abort rate
+        /*
+        printf("PASS! SimTime = %ld\n", endtime - starttime);
+        if (STATS_ENABLE)
+            stats.print();
+        */
 	}
 	return 0;
 }
