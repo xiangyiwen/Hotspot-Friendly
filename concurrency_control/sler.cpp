@@ -16,6 +16,9 @@ RC txn_man::validate_sler(RC rc) {
     //12-5 Debug
 //    int temp_sem = sler_semaphore;
 
+    /**
+     * Wait to validate. && Check deadlock again. || Abort myself.
+     */
     while(true){
         // Abort myself actively
         if(status == ABORTED || rc == Abort){
@@ -37,7 +40,7 @@ RC txn_man::validate_sler(RC rc) {
 
             auto dep_size= sler_dependency.size();
 
-            bool a = sler_dependency[i].dep_type == READ_WRITE_;
+//            bool a = sler_dependency[i].dep_type == READ_WRITE_;
 
             if(sler_dependency[i].dep_type == READ_WRITE_){
                 cout << "now_i : " << i << endl;
@@ -76,10 +79,10 @@ RC txn_man::validate_sler(RC rc) {
             }
         }*/
 
-
 //        int dp_size = dependency_cnt;
 //        int debug_i =0 ;
-        //12-6 make sure the workload can finish
+
+        //12-6 [Check Deadlock again]: Make sure the workload can finish.
         for(auto & dep_pair : sler_dependency) {
             if(!dep_pair.dep_type){               // we may get an element before it being initialized(empty data / wrong data)
                 break;
@@ -136,7 +139,7 @@ RC txn_man::validate_sler(RC rc) {
             }
         }
 
-        // Timeout: Make sure the workload can finish.
+        // [Timeout]: Make sure the workload can finish.
         uint64_t span = get_sys_clock() - starttime;
         if(span > 10000){
 
@@ -151,7 +154,7 @@ RC txn_man::validate_sler(RC rc) {
     /**
      * Update status.
      */
-     /*
+    /*
 //    while(!ATOM_CAS(status_latch, false, true))
 //        PAUSE
 //    // Abort myself actively  [this shouldn't happen]
@@ -166,9 +169,14 @@ RC txn_man::validate_sler(RC rc) {
 //    else
 //        assert(false);
 //    status_latch = false;
-    */
+   */
 
-    // Abort myself actively
+    /*
+     * Abort myself actively.
+     * [Theory Impossible]: Shouldn't enter the branch of status == ABORTED.
+     *                      These branches can only be entered when semaphore == 0 && status != ABORTED in line 24, which is impossible.
+     * [Actually Possible]: Since we may subtract the semaphore of a txn too aggressively, semaphore == 0 && status != ABORTED in line 24 is possible.
+     */
     if(status == ABORTED){
         abort_process(this);
         return Abort;
@@ -202,7 +210,7 @@ RC txn_man::validate_sler(RC rc) {
         // Caculate serial_ID
         Version* current_version = (Version*)accesses[rid]->tuple_version;
 
-        if(accesses[rid]->type == WR) {          // we record the new version in read_write_set 11-22
+        if(accesses[rid]->type == WR) {          // we record the new version in read_write_set   11-22
             current_version = current_version->next;
         }
 
@@ -333,9 +341,21 @@ RC txn_man::validate_sler(RC rc) {
                     */
                     }
                 }
-                else if(temp_status == writing || temp_status == committing || temp_status == COMMITED){
-                    // Treat next tuple version as committed(Do nothing here)
+//                else if(temp_status == writing || temp_status == committing || temp_status == COMMITED){
+//                    // Treat next tuple version as committed(Do nothing here)
+//
+//                    // 2-13: Make sure "COMMITTED" txn won't process too fast that it has already reset newer_version_txn->sler_serial_id = 0.
+//                    assert(newer_version_txn->sler_serial_id != 0);
+//                    min_next_begin = std::min(min_next_begin,newer_version_txn->sler_serial_id);
+//                }
+                else if(temp_status == writing){
+                    // newer_version->begin_ts may not be set, but newer_version_txn->sler_serial_id is already calculated.
                     min_next_begin = std::min(min_next_begin,newer_version_txn->sler_serial_id);
+                }
+                else if(temp_status == committing || temp_status == COMMITED){
+                    // Treat next tuple version as committed(Do nothing here)
+                    assert(newer_version->begin_ts != UINT64_MAX);
+                    min_next_begin = std::min(min_next_begin,newer_version->begin_ts);
                 }
                 else if(temp_status == validating){
                     newer_version_txn->status_latch = false;
@@ -525,6 +545,7 @@ void txn_man::abort_process(txn_man * txn){
                     pre_new->next = old_version;
                 }
                 if(old_version->prev == new_version){
+                    // I think (old_version->prev == new_version) is always true.
                     old_version->prev = pre_new;
                 }
                 new_version->prev = NULL;
