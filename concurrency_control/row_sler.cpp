@@ -10,13 +10,13 @@
 #if CC_ALG == SLER
 
 /**
- * DELETED FUNCTION
+ * OBSOLETE FUNCTION
  * we can directly use row_t.primary_key.
  * @param _row_id
  */
- /*
+/*
 void Row_sler::set_row_id(uint64_t _row_id){
-    this->row_id = _row_id;
+   this->row_id = _row_id;
 }
 */
 
@@ -24,6 +24,15 @@ void Row_sler::set_row_id(uint64_t _row_id){
 /**
  * Initialize a row in SLER
  * @param row : pointer of this row(the first version) [Empty: no data]
+ */
+/*
+ * USAGE:
+ * 1. init_table() of test_wl,tpcc_wl and ycsb_wl: these functions are only processed
+ *    in data generating phase(insert tuples to initialize relevant tables),
+ *    so it's safe and correct to set begin_ts = 0.
+ * 2. run_payment() of tpcc_txn.cpp: this function runs Payment which needs to insert a new tuple in HISTORY table.
+ *    However, it doesn't really insert this new tuple in HISTORY, so the value of begin_ts doesn't matter.
+ *    Once this tuple is really inserted, DBx1000 must record it in Accesses and set begin_ts = INF.
  */
 void Row_sler::init(row_t *row){
     // initialize version header
@@ -43,7 +52,7 @@ void Row_sler::init(row_t *row){
 }
 
 /**
- * Read/Write a row and according to the type.
+ * Read/Write a row according to the type.
  * @param txn : the txn which accesses the row
  * @param type : operation type(can only be R_REQ, P_REQ)
  * @param row : the row in the Access Object [Empty: no data]
@@ -61,7 +70,7 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 //    }
 
     if (type == R_REQ) {
-        // Note: should search write set and read set. However, since no record will be accessed twice, we don't have to search these two sets
+        // Todo: Should search write set and read set. However, since no record will be accessed twice, we don't have to search these two sets
 
         // Small optimization for read-intensive workload: if the version_header is a committed version, then read don't have to lock it.
         // Optimization - v1: [BUG]
@@ -102,7 +111,7 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
          */
 
         // Optional Optimization - v3:
-        //todo: it sill occasionally causes deadlock(continuous ""You should wait") [Wait to Fix]
+        //todo: it sill occasionally causes deadlock(continuous "You should wait") [Wait to Fix]
 //        /*
         Version* temp_version = version_header;
         auto temp_retire_txn = temp_version->retire;
@@ -167,9 +176,14 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 
                     status_t temp_status = retire_txn->status;
 
-                    // [IMPOSSIBLE]: read without recording dependency
+
+                    //[IMPOSSIBLE]
+                    /* committing and COMMITTED means version_header.retire == NULL right now, which means retire_txn acquires the blatch.
+                     * This is impossible because I acquire the blatch in line 305.
+                     * Retire_txn has no chance to acquire the blatch and update the version_header.retire == NULL.
+                     */
                     if (temp_status == committing || temp_status == COMMITED) {
-                        // safe: retire_txn cannot commit without acquiring the blatch on this tuple(retire_txn need blatch to modify meta-data),
+                        // Safe: retire_txn cannot commit without acquiring the blatch on this tuple(retire_txn need blatch to modify meta-data),
                         // which means it can commit only after I finish the operation(blatch is owned by me)
 
                         access->tuple_version = version_header;
@@ -280,6 +294,7 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
             }
         }
 
+        // [Impossible]
         if(!version_header ){
             assert(version_header);
             rc = Abort;
@@ -292,6 +307,11 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
             PAUSE
         }
 
+        /*
+         * [DELETED ASSERTION]
+         * version_header->prev maynot be NULL, because read and write operation will change version_header
+         * when there's a deadlock / access an aborted version without collecting the obsolete version and reset the prev pointer.
+         */
 //        assert(version_header->prev == nullptr);               // this tuple version is the newest version
 
         while (version_header) {
@@ -299,14 +319,14 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 
             retire_txn = version_header->retire;
 
-            //Error Case, should not happen
+            // [Error Case]: should not happen
             if (version_header->end_ts != INF) {
                 assert(false);
                 blatch = false;
                 rc = Abort;
                 break;
             } else {
-                // Note: should search write set and read set. However, since no record will be accessed twice, we don't have to search these two sets
+                // Todo: should search write set and read set. However, since no record will be accessed twice, we don't have to search these two sets
 
                 rc = RCOK;
 
@@ -351,6 +371,10 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                         status_t temp_status = retire_txn->status;
 
                         //[IMPOSSIBLE]
+                        /* committing and COMMITTED means version_header.retire == NULL right now, which means retire_txn acquires the blatch.
+                         * This is impossible because I acquire the blatch in line 305.
+                         * Retire_txn has no chance to acquire the blatch and update the version_header.retire == NULL.
+                         */
                         if (temp_status == committing || temp_status == COMMITED) {
 
                             // create new version & record current row in accesses
@@ -387,7 +411,6 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                                     break;
                                 }
                                 assert(dep_pair.dep_type != READ_WRITE_);
-
 
                                 if(dep_pair.dep_txn->get_sler_txn_id() == dep_pair.dep_txn_id) {           // Don't inform the txn_manager who is already running a new txn.
                                     dep_pair.dep_txn->UnionWaitingSet(txn->sler_waiting_set);
@@ -470,6 +493,7 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
             }
         }
 
+        // [Impossible]
         if(!version_header){
             assert(version_header);
             rc = Abort;

@@ -85,7 +85,7 @@ RC thread_t::run() {
 				    }
 					if (m_query == NULL && _abort_buffer_empty_slots == 0) {
 						M_ASSERT(min_ready_time >= curr_time, "min_ready_time=%ld, curr_time=%ld\n", min_ready_time, curr_time);
-						usleep((min_ready_time - curr_time)/1000); 
+						usleep((min_ready_time - curr_time)/1000);
 					} else if (m_query == NULL) {
 						m_query = query_queue->get_next_query( _thd_id );
                         m_query->rerun = false;
@@ -306,20 +306,19 @@ ts_t thread_t::get_next_n_ts(int n) {
 	return glob_manager->get_n_ts(n);
 }
 
-ts_t
-thread_t::get_next_ts() {
-	if (g_ts_batch_alloc) {
-		if (_curr_ts % g_ts_batch_num == 0) {
-			_curr_ts = glob_manager->get_ts(get_thd_id());
-			_curr_ts ++;
-		} else {
-			_curr_ts ++;
-		}
-		return _curr_ts - 1;
-	} else {
-		_curr_ts = glob_manager->get_ts(get_thd_id());
-		return _curr_ts;
-	}
+ts_t thread_t::get_next_ts() {
+    if (g_ts_batch_alloc) {
+        if (_curr_ts % g_ts_batch_num == 0) {
+            _curr_ts = glob_manager->get_ts(get_thd_id());
+            _curr_ts ++;
+        } else {
+            _curr_ts ++;
+        }
+        return _curr_ts - 1;
+    } else {
+        _curr_ts = glob_manager->get_ts(get_thd_id());
+        return _curr_ts;
+    }
 }
 
 RC thread_t::runTest(txn_man * txn)
@@ -327,9 +326,9 @@ RC thread_t::runTest(txn_man * txn)
 	RC rc = RCOK;
 	if (g_test_case == READ_WRITE) {
 		rc = ((TestTxnMan *)txn)->run_txn(g_test_case, 0);
-#if CC_ALG == OCC
+        #if CC_ALG == OCC
 		txn->start_ts = get_next_ts();
-#endif
+        #endif
 		rc = ((TestTxnMan *)txn)->run_txn(g_test_case, 1);
 		printf("READ_WRITE TEST PASSED\n");
 		return FINISH;

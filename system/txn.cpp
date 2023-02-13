@@ -48,7 +48,7 @@ void txn_man::init(thread_t * h_thd, workload * h_wl, uint64_t thd_id) {
     sler_semaphore = 0;
     sler_serial_id = 0;
     status_latch = false;
-    serial_id_latch = false;
+//    serial_id_latch = false;
 //    dependency_latch = false;
 //    waiting_set_latch = false;
 //    semaphore_latch = false;
@@ -556,8 +556,8 @@ void txn_man::index_read(INDEX * index, idx_key_t key, int part_id, itemid_t *& 
 RC txn_man::finish(RC rc) {
 #if TPCC_USER_ABORT
     RC ret_rc = rc;
-  if (rc == ERROR)
-    rc = Abort;
+    if (rc == ERROR)
+        rc = Abort;
 #endif
 
 #if THINKTIME > 0
@@ -580,12 +580,12 @@ RC txn_man::finish(RC rc) {
 	else 
 		cleanup(rc);
 #elif CC_ALG == SILO
-  if (rc == RCOK)
+    if (rc == RCOK)
 		rc = validate_silo();
 	else 
 		cleanup(rc);
 #elif CC_ALG == IC3
-  if (rc == RCOK) {
+    if (rc == RCOK) {
     rc = validate_ic3();
     if (rc == RCOK) {
       if (!ATOM_CAS(status, RUNNING, COMMITED))
@@ -601,13 +601,13 @@ RC txn_man::finish(RC rc) {
     abort_ic3();
   cleanup(rc);
 #elif CC_ALG == HEKATON
-  rc = validate_hekaton(rc);
+    rc = validate_hekaton(rc);
 	cleanup(rc);
 #elif CC_ALG == SLER
-	rc = validate_sler(rc);
+    rc = validate_sler(rc);
     cleanup(rc);
 #elif CC_ALG == WOUND_WAIT
-  if (rc == RCOK) {
+    if (rc == RCOK) {
         if (!ATOM_CAS(status, RUNNING, COMMITED))
             rc = Abort;
 	}
@@ -662,9 +662,9 @@ RC txn_man::finish(RC rc) {
 
 #if TPCC_USER_ABORT
     if (rc == Abort && (ret_rc == ERROR)) {
-  //printf("txn-%lu user init abort! \n", txn_id);
-    return ret_rc;
-  }
+        //printf("txn-%lu user init abort! \n", txn_id);
+        return ret_rc;
+    }
 #endif
     //printf("txn-%lu finished status=%d\n", txn_id, status);
     return rc;

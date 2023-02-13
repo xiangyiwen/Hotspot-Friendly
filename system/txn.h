@@ -187,11 +187,11 @@ class txn_man
 
     // make sure that status, dependency, waiting_set, semaphore is accessed exclusively
 //    #if LATCH == LH_SPINLOCK
-        volatile bool       status_latch;
-        volatile bool       dependency_latch;
-        volatile bool       waiting_set_latch;
-        volatile bool       semaphore_latch;
-        volatile bool       serial_id_latch;
+    volatile bool       status_latch;
+    volatile bool       dependency_latch;
+    volatile bool       waiting_set_latch;
+    volatile bool       semaphore_latch;
+    volatile bool       serial_id_latch;
 
 //    #elif LATCH == LH_MUTEX
 //        pthread_mutex_t * status_latch;
@@ -436,9 +436,9 @@ class txn_man
     void                index_insert(row_t * row, INDEX * index, idx_key_t key);
 
   private:
-#if CC_ALG == BAMBOO || CC_ALG == WOUND_WAIT || CC_ALG == WAIT_DIE || CC_ALG == NO_WAIT || CC_ALG == DL_DETECT
+    #if CC_ALG == BAMBOO || CC_ALG == WOUND_WAIT || CC_ALG == WAIT_DIE || CC_ALG == NO_WAIT || CC_ALG == DL_DETECT
     void                assign_lock_entry(Access * access);
-#endif
+    #endif
 
 };
 

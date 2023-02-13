@@ -12,8 +12,7 @@
 /*************************************************/
 int Query_queue::_next_tid;
 
-void 
-Query_queue::init(workload * h_wl) {
+void Query_queue::init(workload * h_wl) {
 	all_queries = new Query_thd * [g_thread_cnt];
 	_wl = h_wl;
 	_next_tid = 0;
