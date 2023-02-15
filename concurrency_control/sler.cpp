@@ -174,10 +174,18 @@ RC txn_man::validate_sler(RC rc) {
     /*
      * Abort myself actively.
      * [Theory Impossible]: Shouldn't enter the branch of status == ABORTED.
-     *                      These branches can only be entered when semaphore == 0 && status != ABORTED in line 24, which is impossible.
-     * [Actually Possible]: Since we may subtract the semaphore of a txn too aggressively, semaphore == 0 && status != ABORTED in line 24 is possible.
+     *    These branches can only be entered when semaphore == 0 && status != ABORTED in line 24, which is impossible.
+     *    Because we never aggressively subtract semaphore, which means t.semaphore == 0 only when transactions t depends on are committed(WR/WW/RW) or aborted(RW).
+     * [Actually Possible]: Wrong deadlock detection.
+     *    When t1 accesses an uncommitted tuple version(created by t2) and find that this access will cause deadlock,
+     *    t1 will set t2.status = ABORTED to abort t2. However, the deadlock detection has certain possibility to kill t2 wrongly.
+     *    In the situation where t2 doesn't depend on t1, but t2 is wrongly detected to cause deadlock, t2 may normally process and first reach line 28 with semaphore == 0,
+     *    and then set_abort() by t1 and then reach the following status == ABORTED branches, which make semaphore == 0 && status == ABORTED to be possible.
      */
     if(status == ABORTED){
+        //2-15 DEBUG
+        uint64_t temp_semaphore = this->sler_semaphore;
+
         abort_process(this);
         return Abort;
     }
