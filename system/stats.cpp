@@ -151,7 +151,9 @@ void Stats::print() {
             _stats[tid]->user_abort_cnt);
     }
 
-    // Used by dl_detect CC.
+    // Calculate the average value.
+    // Todo: Notice that the value of these three metrics(latency,commit_latency,time_man) isn't divided by BILLION,
+    //  because it is already very small. Once we divide it, they will all equal to 0.
     total_latency = total_latency / total_txn_cnt;
     total_commit_latency = total_commit_latency / total_txn_cnt;
     total_time_man = total_time_man - total_time_wait;
