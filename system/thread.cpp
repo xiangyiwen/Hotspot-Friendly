@@ -133,7 +133,7 @@ RC thread_t::run() {
         #elif CC_ALG == SLER
 //                uint64_t temp_thread_id = (get_thd_id() >> 32) & 0xffffffff;
 //                m_txn->sler_txn_id = temp_thread_id << 32 | (get_sys_clock() & 0xffffffff);
-                if(m_txn->sler_semaphore !=0){          //11-21
+                if(m_txn->sler_semaphore !=0){          //11-21 DEBUG
                     cout << "sler_semaphore: " << m_txn->sler_semaphore << endl;
                     cout << "status: " << m_txn->status << endl;
                 }
@@ -195,7 +195,8 @@ RC thread_t::run() {
             #endif
 		}
 
-		ts_t endtime = get_sys_clock();
+        // 2-15 [BUG in BamBoo]: Wrong time to get endtime, which causes wrong throughput when ABORT_BUFFER_ENABLE == false.
+        //ts_t endtime = get_sys_clock();
 
 		if (rc == Abort) {
 			uint64_t penalty = 0;
@@ -220,7 +221,10 @@ RC thread_t::run() {
 			}
 		}
 
-		uint64_t timespan = endtime - starttime;
+        // 2-15 [BUG in BamBoo] : Make throughput correct when ABORT_BUFFER_ENABLE == false.
+        ts_t endtime = get_sys_clock();
+
+        uint64_t timespan = endtime - starttime;
 		INC_STATS(get_thd_id(), run_time, timespan);
 		//stats.add_lat(get_thd_id(), timespan);
 		if (rc == RCOK) {
