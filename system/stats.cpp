@@ -7,121 +7,180 @@
 
 #define BILLION 1000000000UL
 
+/**
+ * [Stats_thd] ================================================================================
+ */
+
+/**
+*
+* @param thd_id : UNUSED
+*/
 void Stats_thd::init(uint64_t thd_id) {
-  clear();
-  all_debug1 = (uint64_t *)
-      _mm_malloc(sizeof(uint64_t) * MAX_TXN_PER_PART, 64);
-  all_debug2 = (uint64_t *)
-      _mm_malloc(sizeof(uint64_t) * MAX_TXN_PER_PART, 64);
+    clear();
+    all_debug1 = (uint64_t *)_mm_malloc(sizeof(uint64_t) * MAX_TXN_PER_PART, 64);
+    all_debug2 = (uint64_t *)_mm_malloc(sizeof(uint64_t) * MAX_TXN_PER_PART, 64);
 }
 
+// Initialize all metrics declared in Stats_thd class.
 void Stats_thd::clear() {
-  ALL_METRICS(INIT_VAR, INIT_VAR, INIT_VAR)
+    ALL_METRICS(INIT_VAR, INIT_VAR, INIT_VAR)
 }
 
+
+
+/**
+ * [Stats_tmp] ================================================================================
+ */
 void Stats_tmp::init() {
-  clear();
+    clear();
 }
 
+// Initialize 3 metrics declared in Stats_tmp class.
 void Stats_tmp::clear() {
-  TMP_METRICS(INIT_VAR, INIT_VAR)
+    TMP_METRICS(INIT_VAR, INIT_VAR)
 }
 
+
+/**
+ * [Stats] ====================================================================================
+ */
+
+/**
+ * 1. Malloc space for _stats and tmp_stats of all threads.
+ * 2. Initialize GLOBAL metrics.
+ */
 void Stats::init() {
-  if (!STATS_ENABLE)
-    return;
-  _stats = (Stats_thd**)
-      _mm_malloc(sizeof(Stats_thd*) * g_thread_cnt, 64);
-  tmp_stats = (Stats_tmp**)
-      _mm_malloc(sizeof(Stats_tmp*) * g_thread_cnt, 64);
-  dl_detect_time = 0;
-  dl_wait_time = 0;
-  deadlock = 0;
-  cycle_detect = 0;
-}
+    if (!STATS_ENABLE)              // STATS_ENABLE == true in config.h
+        return;
 
-void Stats::init(uint64_t thread_id) {
-  if (!STATS_ENABLE)
-    return;
-  _stats[thread_id] = (Stats_thd *)
-      _mm_malloc(sizeof(Stats_thd), 64);
-  tmp_stats[thread_id] = (Stats_tmp *)
-      _mm_malloc(sizeof(Stats_tmp), 64);
+    // Malloc space for PER_THREAD metrics.
+    _stats = (Stats_thd**)_mm_malloc(sizeof(Stats_thd*) * g_thread_cnt, 64);
+    tmp_stats = (Stats_tmp**)_mm_malloc(sizeof(Stats_tmp*) * g_thread_cnt, 64);
 
-  _stats[thread_id]->init(thread_id);
-  tmp_stats[thread_id]->init();
-}
-
-void Stats::clear(uint64_t tid) {
-  if (STATS_ENABLE) {
-    _stats[tid]->clear();
-    tmp_stats[tid]->clear();
+    // Initialize GLOBAL metrics.
     dl_detect_time = 0;
     dl_wait_time = 0;
-    cycle_detect = 0;
     deadlock = 0;
-  }
+    cycle_detect = 0;
 }
 
-void Stats::add_debug(uint64_t thd_id, uint64_t value, uint32_t select) {
-  if (g_prt_lat_distr && warmup_finish) {
-    uint64_t tnum = _stats[thd_id]->txn_cnt;
-    if (select == 1)
-      _stats[thd_id]->all_debug1[tnum] = value;
-    else if (select == 2)
-      _stats[thd_id]->all_debug2[tnum] = value;
-  }
+/**
+ * 1. Malloc space for _stats and tmp_stats object of a specific thread.
+ * 2. Initialize all metrics of the specific thread.
+ * @param thread_id : id of the specific thread
+ */
+void Stats::init(uint64_t thread_id) {
+    if (!STATS_ENABLE)
+        return;
+
+    _stats[thread_id] = (Stats_thd *)_mm_malloc(sizeof(Stats_thd), 64);
+    tmp_stats[thread_id] = (Stats_tmp *)_mm_malloc(sizeof(Stats_tmp), 64);
+
+    _stats[thread_id]->init(thread_id);
+    tmp_stats[thread_id]->init();
 }
 
-void Stats::commit(uint64_t thd_id) {
-  if (STATS_ENABLE) {
-    _stats[thd_id]->time_man += tmp_stats[thd_id]->time_man;
-    _stats[thd_id]->time_index += tmp_stats[thd_id]->time_index;
-    _stats[thd_id]->time_wait += tmp_stats[thd_id]->time_wait;
-    tmp_stats[thd_id]->init();
-  }
-}
+/**
+ * Clear PER_THREAD and GLOBAL metrics of a specific thread.
+ * @param tid : id of the specific thread
+ */
+void Stats::clear(uint64_t tid) {
+    if (STATS_ENABLE) {
+        _stats[tid]->clear();
+        tmp_stats[tid]->clear();
 
-void Stats::abort(uint64_t thd_id) {
-  if (STATS_ENABLE)
-    tmp_stats[thd_id]->init();
-}
-
-void Stats::print() {
-  ALL_METRICS(INIT_TOTAL_VAR, INIT_TOTAL_VAR, INIT_TOTAL_VAR)
-  for (uint64_t tid = 0; tid < g_thread_cnt; tid ++) {
-    ALL_METRICS(SUM_UP_STATS, SUM_UP_STATS, MAX_STATS)
-    printf("[tid=%lu] txn_cnt=%lu,abort_cnt=%lu, user_abort_cnt=%lu\n",
-        tid, _stats[tid]->txn_cnt, _stats[tid]->abort_cnt,
-        _stats[tid]->user_abort_cnt);
-  }
-  total_latency = total_latency / total_txn_cnt;
-  total_commit_latency = total_commit_latency / total_txn_cnt;
-  total_time_man = total_time_man - total_time_wait;
-  if (output_file != NULL) {
-    ofstream outf(output_file);
-    if (outf.is_open()) {
-      outf << "[summary] throughput=" << total_txn_cnt / total_run_time *
-      BILLION * THREAD_CNT << ", ";
-      ALL_METRICS(WRITE_STAT_X, WRITE_STAT_Y, WRITE_STAT_Y)
-      outf << "deadlock_cnt=" << deadlock << ", ";
-      outf << "cycle_detect=" << cycle_detect << ", ";
-      outf << "dl_detect_time=" << dl_detect_time / BILLION << ", ";
-      outf << "dl_wait_time=" << dl_wait_time / BILLION << "\n";
-      outf.close();
+        dl_detect_time = 0;
+        dl_wait_time = 0;
+        cycle_detect = 0;
+        deadlock = 0;
     }
-  }
-  std::cout << "[summary] throughput=" << total_txn_cnt / total_run_time *
-      BILLION * THREAD_CNT << ", ";
-  ALL_METRICS(PRINT_STAT_X, PRINT_STAT_Y, PRINT_STAT_Y)
-  std::cout << "deadlock_cnt=" << deadlock << ", ";
-  std::cout << "cycle_detect=" << cycle_detect << ", ";
-  std::cout << "dl_detect_time=" << dl_detect_time / BILLION << ", ";
-  std::cout << "dl_wait_time=" << dl_wait_time / BILLION << "\n";
-  if (g_prt_lat_distr)
-    print_lat_distr();
 }
 
+/**
+ * USELESS(only TICTOC calls it)
+ * g_prt_lat_distr: print the transaction latency distribution or not.
+ * Since g_prt_lat_distr == false in config.h, this function does nothing.
+ */
+void Stats::add_debug(uint64_t thd_id, uint64_t value, uint32_t select) {
+    if (g_prt_lat_distr && warmup_finish) {           // g_prt_lat_distr == false
+        uint64_t tnum = _stats[thd_id]->txn_cnt;
+        if (select == 1)
+            _stats[thd_id]->all_debug1[tnum] = value;
+        else if (select == 2)
+            _stats[thd_id]->all_debug2[tnum] = value;
+    }
+}
+
+/**
+ * The transaction in thread(thd_id) commits successfully.
+ * Record 3 processing metrics in tmp_stats[thd_id] of this transaction to _stats[thd_id].
+ * @param thd_id : thread_ID of a thread which just commits a transaction
+ */
+void Stats::commit(uint64_t thd_id) {
+    if (STATS_ENABLE) {
+        _stats[thd_id]->time_man += tmp_stats[thd_id]->time_man;
+        _stats[thd_id]->time_index += tmp_stats[thd_id]->time_index;
+        _stats[thd_id]->time_wait += tmp_stats[thd_id]->time_wait;
+        tmp_stats[thd_id]->init();
+    }
+}
+
+/**
+ * The transaction in thread(thd_id) aborts.
+ * Clear 3 processing metrics in tmp_stats[thd_id] of this transaction.
+ * @param thd_id
+ */
+void Stats::abort(uint64_t thd_id) {
+    if (STATS_ENABLE)
+        tmp_stats[thd_id]->init();
+}
+
+/**
+ * Calculate processing results of this workload.
+ */
+void Stats::print() {
+    // Declare and initialize total_XX metrics for every metric.
+    ALL_METRICS(INIT_TOTAL_VAR, INIT_TOTAL_VAR, INIT_TOTAL_VAR)
+
+    // Calculate the sum of x&y metrics and the max of z metric.
+    for (uint64_t tid = 0; tid < g_thread_cnt; tid ++) {
+        ALL_METRICS(SUM_UP_STATS, SUM_UP_STATS, MAX_STATS)
+        // print the proccessing result of each thread to terminal
+        printf("[tid=%lu] txn_cnt=%lu,abort_cnt=%lu, user_abort_cnt=%lu\n",
+            tid, _stats[tid]->txn_cnt, _stats[tid]->abort_cnt,
+            _stats[tid]->user_abort_cnt);
+    }
+
+    total_latency = total_latency / total_txn_cnt;
+    total_commit_latency = total_commit_latency / total_txn_cnt;
+    total_time_man = total_time_man - total_time_wait;
+
+    if (output_file != NULL) {
+        ofstream outf(output_file);
+        if (outf.is_open()) {
+            outf << "[summary] throughput=" << total_txn_cnt / total_run_time * BILLION * THREAD_CNT << ", ";
+            ALL_METRICS(WRITE_STAT_X, WRITE_STAT_Y, WRITE_STAT_Y)
+            outf << "deadlock_cnt=" << deadlock << ", ";
+            outf << "cycle_detect=" << cycle_detect << ", ";
+            outf << "dl_detect_time=" << dl_detect_time / BILLION << ", ";
+            outf << "dl_wait_time=" << dl_wait_time / BILLION << "\n";
+            outf.close();
+        }
+    }
+
+    std::cout << "[summary] throughput=" << total_txn_cnt / total_run_time * BILLION * THREAD_CNT << ", ";
+    ALL_METRICS(PRINT_STAT_X, PRINT_STAT_Y, PRINT_STAT_Y)
+    std::cout << "deadlock_cnt=" << deadlock << ", ";
+    std::cout << "cycle_detect=" << cycle_detect << ", ";
+    std::cout << "dl_detect_time=" << dl_detect_time / BILLION << ", ";
+    std::cout << "dl_wait_time=" << dl_wait_time / BILLION << "\n";
+    if (g_prt_lat_distr)      // g_prt_lat_distr == false
+        print_lat_distr();
+}
+
+/**
+ * Print the transaction latency distribution.
+ */
 void Stats::print_lat_distr() {
   FILE * outf;
   if (output_file != NULL) {

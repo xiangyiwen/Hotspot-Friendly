@@ -22,6 +22,7 @@
 #define STR(x) #x
 #define XSTR(x) STR(x)
 #define STR_X(tpe, name) XSTR(name)
+//VAL_X:calculate the metrics that is relevant to time, so it needs to be divided by billion.
 #define VAL_X(tpe, name) total_##name / BILLION
 #define VAL_Y(tpe, name) total_##name
 #define PRINT_STAT_X(tpe, name) \
@@ -39,7 +40,10 @@ class Stats_thd {
   void clear();
 
   char _pad2[CL_SIZE];
+
+  // Declare all metrics(except for metrics for statistic purpose, eg. total_XX)
   ALL_METRICS(DECLARE_VAR, DECLARE_VAR, DECLARE_VAR)
+
   uint64_t * all_debug1;
   uint64_t * all_debug2;
   char _pad[CL_SIZE];
@@ -49,9 +53,12 @@ class Stats_tmp {
  public:
   void init();
   void clear();
+
+  // temporary stats only include 3 metrics
   double time_man;
   double time_index;
   double time_wait;
+
   char _pad[CL_SIZE - sizeof(double)*3];
 };
 
