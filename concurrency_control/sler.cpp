@@ -184,7 +184,7 @@ RC txn_man::validate_sler(RC rc) {
      */
     if(status == ABORTED){
         //2-15 DEBUG
-        uint64_t temp_semaphore = this->sler_semaphore;
+//        uint64_t temp_semaphore = this->sler_semaphore;         // semaphore == 0
 
         abort_process(this);
         return Abort;

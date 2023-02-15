@@ -16,6 +16,7 @@
 #include "mem_alloc.h"
 #include "query.h"
 
+
 int ycsb_wl::next_tid;
 
 RC ycsb_wl::init() {
@@ -133,10 +134,19 @@ void * ycsb_wl::init_table_slice() {
 		assert(rc == RCOK);
 		uint64_t primary_key = key;
 		new_row->set_primary_key(primary_key);
-		new_row->set_value(0, &primary_key);
-		Catalog * schema = the_table->get_schema();
-		
-		for (UInt32 fid = 0; fid < schema->get_field_cnt(); fid ++) {
+//		new_row->set_value(0, &primary_key);
+
+        // 2-15[BUG FIX] Set the correct value instead of a pointer to the primary key column.
+        char *temp = (char *) _mm_malloc(sizeof(char), 64);
+        sprintf(temp,"%lu",primary_key);
+        new_row->set_value(0, temp);
+        _mm_free(temp);
+
+
+        Catalog * schema = the_table->get_schema();
+
+        // 2-15[BUG FIX]: Don't overwrite the value of the primary key column.
+		for (UInt32 fid = 1; fid < schema->get_field_cnt(); fid ++) {
 			char value[6] = "hello";
 			new_row->set_value(fid, value);
 		}
