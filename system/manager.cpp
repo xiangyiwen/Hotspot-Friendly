@@ -25,8 +25,7 @@ void Manager::init() {
 		pthread_mutex_init( &mutexes[i], NULL );
 }
 
-uint64_t 
-Manager::get_ts(uint64_t thread_id) {
+uint64_t Manager::get_ts(uint64_t thread_id) {
 	if (g_ts_batch_alloc)
 		assert(g_ts_alloc == TS_CAS);
 	uint64_t time;

@@ -151,6 +151,7 @@ void Stats::print() {
             _stats[tid]->user_abort_cnt);
     }
 
+    // Used by dl_detect CC.
     total_latency = total_latency / total_txn_cnt;
     total_commit_latency = total_commit_latency / total_txn_cnt;
     total_time_man = total_time_man - total_time_wait;

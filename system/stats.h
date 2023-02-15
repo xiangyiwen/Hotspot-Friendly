@@ -13,18 +13,20 @@
   y(uint64_t, cascading_abort_times) z(uint64_t, max_abort_length) \
   y(uint64_t, txn_cnt_long) y(uint64_t, abort_cnt_long) y(uint64_t, cascading_abort_cnt) \
   y(uint64_t, lock_acquire_cnt) y(uint64_t, lock_directly_cnt) \
-  TMP_METRICS(x, y) 
+  TMP_METRICS(x, y)
+
 #define DECLARE_VAR(tpe, name) tpe name;
 #define INIT_VAR(tpe, name) name = 0;
 #define INIT_TOTAL_VAR(tpe, name) tpe total_##name = 0;
 #define SUM_UP_STATS(tpe, name) total_##name += _stats[tid]->name;
 #define MAX_STATS(tpe, name) total_##name = max(total_##name, _stats[tid]->name);
+
 #define STR(x) #x
 #define XSTR(x) STR(x)
 #define STR_X(tpe, name) XSTR(name)
-//VAL_X:calculate the metrics that is relevant to time, so it needs to be divided by billion.
-#define VAL_X(tpe, name) total_##name / BILLION
+#define VAL_X(tpe, name) total_##name / BILLION         // VAL_X: calculate the metrics that is relevant to time, so it needs to be divided by billion.
 #define VAL_Y(tpe, name) total_##name
+
 #define PRINT_STAT_X(tpe, name) \
   std::cout << STR_X(tpe, name) << "= " << VAL_X(tpe, name) << ", ";
 #define PRINT_STAT_Y(tpe, name) \

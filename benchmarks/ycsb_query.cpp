@@ -21,7 +21,7 @@ void ycsb_query::init(uint64_t thd_id, workload * h_wl, Query_thd * query_thd) {
 	local_req_per_query = REQ_PER_QUERY;
 	double x = (double)(rand() % 100) / 100.0;
 	if (x < g_long_txn_ratio) {
-		local_req_per_query = MAX_ROW_PER_TXN;
+		local_req_per_query = MAX_ROW_PER_TXN;              // assign the count of requests as MAX_ROW_PER_TXN
 		local_read_perc = g_long_txn_read_ratio;
 		// XXX(zhihan): point requests and part to access to a pre-allocate
 		// spot in the thd's query queue; so that dynamically generate queries.

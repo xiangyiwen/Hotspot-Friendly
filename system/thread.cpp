@@ -233,6 +233,7 @@ RC thread_t::run() {
             INC_STATS(get_thd_id(), txn_cnt, 1);
             #if WORKLOAD == YCSB
                 if (unlikely(g_long_txn_ratio > 0)) {
+                    // request_cnt of a long transaction equals to MAX_ROW_PER_TXN >> REQ_PER_QUERY
                     if ( ((ycsb_query *) m_query)->request_cnt > REQ_PER_QUERY)
                         INC_STATS(get_thd_id(), txn_cnt_long, 1);
                 }
@@ -253,12 +254,13 @@ RC thread_t::run() {
 			m_txn->abort_cnt++;
 		}
 		else if (rc == ERROR) {
-		    // user initiated aborts
+		    // user initiated aborts in TPC-C
 		    INC_STATS(get_thd_id(), time_abort, timespan);
             INC_STATS(get_thd_id(), user_abort_cnt, 1);
             INC_STATS(get_thd_id(), abort_cnt, 1);
             #if WORKLOAD == YCSB
                 if (unlikely(g_long_txn_ratio > 0)) {
+                    printf("Extremely Wrong!\n");
                     if ( ((ycsb_query *) m_query)->request_cnt > REQ_PER_QUERY)
                         INC_STATS(get_thd_id(), abort_cnt_long, 1);
                 }
