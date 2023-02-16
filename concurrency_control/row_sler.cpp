@@ -113,24 +113,23 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
         // Optional Optimization - v3:
         //todo: it sill occasionally causes deadlock(continuous "You should wait") [Wait to Fix]
         //todo: Let this optimization only available to read-only YCSB workload.
-        #if WORKLOAD == YCSB
-            #if READ_PERC == 1
-                Version* temp_version = version_header;
-                auto temp_retire_txn = temp_version->retire;
-                if(!temp_retire_txn){           // committed version
-                    rc = RCOK;
+#if WORKLOAD == YCSB
+        if(g_read_perc == 1){
+            Version *temp_version = version_header;
+            auto temp_retire_txn = temp_version->retire;
+            if (!temp_retire_txn) {           // committed version
+                rc = RCOK;
 
+                access->tuple_version = temp_version;
+                return rc;
+            } else {           //uncommitted version
+                if (temp_retire_txn->status == committing || temp_retire_txn->status == COMMITED) {
                     access->tuple_version = temp_version;
+                    assert(temp_version->begin_ts != UINT64_MAX);   //12-6 Debug
                     return rc;
                 }
-                else{           //uncommitted version
-                    if(temp_retire_txn->status == committing || temp_retire_txn->status == COMMITED){
-                        access->tuple_version = temp_version;
-                        assert(temp_version->begin_ts != UINT64_MAX);   //12-6 Debug
-                        return rc;
-                    }
-                }
-            #endif
+            }
+        }
         #endif
 
 
