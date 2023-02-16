@@ -141,10 +141,17 @@ RC thread_t::run() {
                 m_txn->sler_txn_id = (get_thd_id() << 32) | (get_sys_clock() & 0xffffffff);
                 m_txn->InsertWaitingSet(m_txn->get_sler_txn_id());               // Initialize waiting set
 
+                // 2-16 DEBUG
+//                while(!ATOM_CAS(m_txn->status_latch, false, true))
+//                    PAUSE
+//                m_txn->status = RUNNING;
+//                m_txn->status_latch = false;
+
                 m_txn->status = RUNNING;
 //                m_txn->sler_dependency.clear();
 
-//                assert(m_txn->sler_semaphore == 0);
+                // 2-16 DEBUG
+                assert(m_txn->sler_semaphore == 0);
                 assert(m_txn->sler_dependency.empty());
         #endif
 
