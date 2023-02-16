@@ -170,7 +170,10 @@ class txn_man
     typedef  tbb::concurrent_vector<dep_element> Dependency;   //12-12
     uint64_t            sler_txn_id;              // we can directly record txn* in retire field, this txn_id is used in waiting_set
     uint64_t            sler_serial_id;
-    atomic<uint64_t>    sler_semaphore;
+//    atomic<uint64_t>    sler_semaphore;
+    uint64_t            sler_semaphore;            // 2-16 DEBUG : The read operation of int64 is atomic.
+
+
     //12-6 DEBUG
 //    int                 uncommitted_cnt;
 //    atomic<int>                 dependency_cnt;
@@ -422,12 +425,25 @@ class txn_man
         //12-6
 //        uncommitted_cnt++;
 
-        sler_semaphore++;
+//2-16 DEBUG
+//        sler_semaphore++;
+        ATOM_ADD(sler_semaphore, 1);
         //Equal to semaphore.fetch_add(1);
     }
 
     void SemaphoreSubOne() {
-        sler_semaphore--;
+//2-16 DEBUG
+//        sler_semaphore--;
+        if(sler_semaphore == 0) {
+            // This is an aggressive subtraction, this txn_man has already started a new transaction, so semaphore shouldn't be subtracted.
+        }
+        else {
+            auto new_val = ATOM_SUB_FETCH(sler_semaphore,1);
+            if(new_val == UINT64_MAX) {
+                ATOM_ADD(sler_semaphore, 1);
+            }
+        }
+
     }
 #endif
 
