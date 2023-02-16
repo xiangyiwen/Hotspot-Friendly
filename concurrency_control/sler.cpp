@@ -224,7 +224,7 @@ RC txn_man::validate_sler(RC rc) {
 
         if(serial_id <= current_version->begin_ts) {
             while(current_version->begin_ts == UINT64_MAX){
-//                cout << sler_txn_id << " You should wait!  " << endl;
+                cout << sler_txn_id << " You should wait!  " << endl;
 
                 // 12-12 [DEADLOCK FIX]: Since we may subtract the semaphore of a txn too aggressively, the txn may be validated too early. So we have to do one more deadlock check here.
                 for(auto & dep_pair : sler_dependency) {
@@ -392,7 +392,8 @@ RC txn_man::validate_sler(RC rc) {
                 min_next_begin = std::min(min_next_begin,newer_version->begin_ts);
             }
 
-            if(serial_id >= min_next_begin){
+            // [BUG FIX] : sler_serial_ID may be updated because of RW dependency.
+            if(serial_id >= min_next_begin || this->sler_serial_id >= min_next_begin){
                 abort_process(this);
                 return Abort;
             }
@@ -403,7 +404,8 @@ RC txn_man::validate_sler(RC rc) {
     /**
      * Writing phase
      */
-     this->sler_serial_id = serial_id;
+    // [BUG FIX] : sler_serial_ID may be updated because of RW dependency.
+     this->sler_serial_id = max(this->sler_serial_id , serial_id);
      assert(this->sler_serial_id != 0);
 
      // Update status.
@@ -569,6 +571,8 @@ void txn_man::abort_process(txn_man * txn){
 
             new_version->retire = nullptr;
             new_version->retire_ID = 0;                //11-17
+
+            //TODO: Notice that begin_ts and end_ts of new_version both equal to MAX
 
 
             _mm_free(new_version);
