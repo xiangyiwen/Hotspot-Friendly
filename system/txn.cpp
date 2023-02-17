@@ -679,7 +679,12 @@ void txn_man::release() {
         mem_allocator.free(accesses[i], 0);
     }
     mem_allocator.free(accesses, 0);
+
+    // 2-17
+#if LATCH == LH_MCSLOCK
     delete mcs_node;
+#endif
+//    delete mcs_node;
 #endif
 }
 
