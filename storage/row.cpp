@@ -259,7 +259,10 @@ RC row_t::get_row(access_t type, txn_man * txn, row_t *& row, Access * access) {
       #if CC_ALG == DL_DETECT
       uint64_t * txnids;
       int txncnt;
-      rc = this->manager->lock_get(lt, txn, txnids, txncnt);
+
+      // 2-17 [BUG in BAMBOO] : DL_DETECT should provide 5 inputs, or there will be compiling error.
+       rc = this->manager->lock_get(lt, txn, txnids, txncnt,access);
+
       #elif CC_ALG == BAMBOO || CC_ALG == WOUND_WAIT
       if (txn->lock_abort) {
         row = NULL;
