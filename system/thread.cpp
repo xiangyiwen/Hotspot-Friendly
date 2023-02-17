@@ -69,24 +69,33 @@ RC thread_t::run() {
 					m_query = NULL;
 					ts_t curr_time = get_sys_clock();
 					ts_t min_ready_time = UINT64_MAX;
+
+                    // At least one aborted transaction. Update my_query or min_ready_time.
 					if (_abort_buffer_empty_slots < _abort_buffer_size) {
 						for (int i = 0; i < _abort_buffer_size; i++) {
-							if (_abort_buffer[i].query != NULL && curr_time > _abort_buffer[i].ready_time) {
+                            // This aborted transaction is ready to rerun.
+							if (_abort_buffer[i].query != NULL && curr_time >= _abort_buffer[i].ready_time) {
 								m_query = _abort_buffer[i].query;
                                 m_query->rerun = true;
 								txn_starttime = _abort_buffer[i].starttime;
 								_abort_buffer[i].query = NULL;
 								_abort_buffer_empty_slots ++;
 								break;
-							} else if (_abort_buffer_empty_slots == 0
-					          		&& _abort_buffer[i].ready_time < min_ready_time)
-								min_ready_time = _abort_buffer[i].ready_time;
-							}
+							} else if (_abort_buffer_empty_slots == 0 && _abort_buffer[i].ready_time < min_ready_time) {
+                                // Abort_buffer is full, so we must wait until the first aborted transaction is ready.
+                                // We need to update min_ready_time.
+                                assert(_abort_buffer[i].query != NULL);
+                                min_ready_time = _abort_buffer[i].ready_time;
+                            }
+                        }
 				    }
+
+                    // Abort_buffer is full, so we need to wait.(corresponding to the 'else if' branch in line 85)
 					if (m_query == NULL && _abort_buffer_empty_slots == 0) {
 						M_ASSERT(min_ready_time >= curr_time, "min_ready_time=%ld, curr_time=%ld\n", min_ready_time, curr_time);
 						usleep((min_ready_time - curr_time)/1000);
 					} else if (m_query == NULL) {
+                        // No transaction is ready and abort buffer isn't full, so we can directly process the next transaction.
 						m_query = query_queue->get_next_query( _thd_id );
                         m_query->rerun = false;
                         m_txn->abort_cnt = 0;
@@ -96,11 +105,11 @@ RC thread_t::run() {
                             m_txn->set_ts(get_next_ts());
                         #endif
 					}
+
 					if (m_query)
 						break;
 				}
-			}
-            else {
+			}else {
 				if (rc == RCOK || rc == ERROR) {           // 11-29: Make TPC-C available for SLER.
 					m_query = query_queue->get_next_query( _thd_id );
 
@@ -151,6 +160,7 @@ RC thread_t::run() {
 //                m_txn->sler_dependency.clear();
 
                 // 2-16 DEBUG
+                m_txn->sler_semaphore = 0;
                 assert(m_txn->sler_semaphore == 0);
                 assert(m_txn->sler_dependency.empty());
         #endif

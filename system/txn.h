@@ -88,7 +88,7 @@ class txn_man
     thread_t *          h_thd;
     workload *          h_wl;
     txnid_t 		    txn_id;
-    uint64_t            abort_cnt;
+    uint64_t            abort_cnt;          // Actually this attribute is useless because no one accesses it.
 
     // update per request
     row_t * volatile    cur_row;
