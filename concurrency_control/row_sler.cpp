@@ -113,7 +113,9 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
         // Optional Optimization - v3:
         //todo: it sill occasionally causes deadlock(continuous "You should wait") [Wait to Fix]
         //todo: Let this optimization only available to read-only YCSB workload.
-#if WORKLOAD == YCSB
+        #if WORKLOAD == YCSB
+            // This optimization isn't suitable for synthetic YCSB.
+            #if !SYNTHETIC_YCSB
         if(g_read_perc == 1){
             Version *temp_version = version_header;
             auto temp_retire_txn = temp_version->retire;
@@ -130,6 +132,7 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                 }
             }
         }
+            #endif
         #endif
 
 
@@ -190,6 +193,7 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 
                         access->tuple_version = version_header;
                         assert(version_header->begin_ts != UINT64_MAX);         //12-6 Debug
+                        assert(false);
                         break;
                     } else if (temp_status == RUNNING || temp_status == validating || temp_status == writing) {       // record dependency
 
@@ -381,6 +385,7 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 
                             // create new version & record current row in accesses
                             createNewVersion(txn, access);
+                            assert(false);
 //                            assert(version_header->begin_ts != UINT64_MAX);         //12-6 Debug
                             break;
                         } else if (temp_status == RUNNING || temp_status == validating || temp_status == writing) {       // record dependency
