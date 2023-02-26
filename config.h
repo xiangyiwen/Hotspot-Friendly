@@ -5,7 +5,7 @@
 // Simulation + Hardware
 /***********************************************/
 #define TERMINATE_BY_COUNT true
-#define THREAD_CNT                  10
+#define THREAD_CNT                  20
 #define PART_CNT					1
 // each transaction only accesses 1 virtual partition. But the lock/ts manager and index are not aware of such partitioning. VIRTUAL_PART_CNT describes the request distribution and is only used to generate queries. For HSTORE, VIRTUAL_PART_CNT should be the same as PART_CNT.
 #define VIRTUAL_PART_CNT			1
@@ -16,8 +16,9 @@
 
 // # of transactions to run for warmup
 #define WARMUP						1000
+
 // YCSB or TPCC
-#define WORKLOAD                    TEST
+#define WORKLOAD                    YCSB
 // print the transaction latency distribution
 #define PRT_LAT_DISTR				false
 #define STATS_ENABLE				true
@@ -40,7 +41,7 @@
 /***********************************************/
 // WAIT_DIE, NO_WAIT, DL_DETECT, TIMESTAMP, MVCC, HEKATON, HSTORE, OCC, VLL, TICTOC, SILO, SLER , BAMBOO
 // TODO TIMESTAMP does not work at this moment
-#define CC_ALG                      SLER
+#define CC_ALG                      WAIT_DIE
 #define ISOLATION_LEVEL 			SERIALIZABLE
 
 // latch options
@@ -53,10 +54,12 @@
 // per-row lock/ts management or central lock/ts management
 #define CENTRAL_MAN					false
 #define BUCKET_CNT					31
-#define ABORT_PENALTY               50000
-#define ABORT_BUFFER_SIZE			1
+#define ABORT_PENALTY               100000
+//#define ABORT_PENALTY               5000
+//#define ABORT_BUFFER_SIZE			1
+#define ABORT_BUFFER_SIZE           1
 // ABORT_BUFFER_ENABLE : All CC need this flag be true except SLER. Otherwise, other CC cannot run TPCC.
-#define ABORT_BUFFER_ENABLE			false
+#define ABORT_BUFFER_ENABLE			true
 // [ INDEX ]
 #define ENABLE_LATCH				false
 #define CENTRAL_INDEX				false
@@ -129,12 +132,11 @@
 #define THINKTIME				    0
 #define MAX_RUNTIME                 10
 // max number of rows touched per transaction
-//#define MAX_ROW_PER_TXN             1000
+// MAX_ROW_PER_TXN: the count of requests in a long transaction of YCSB
 #define MAX_ROW_PER_TXN             1000
 #define QUERY_INTVL 				1UL
 // MAX_TXN_PER_PART: used to calculate the txn count of a thread
-#define MAX_TXN_PER_PART            1000000
-//#define MAX_TXN_PER_PART            10000
+#define MAX_TXN_PER_PART            10000
 #define FIRST_PART_LOCAL 			true
 #define MAX_TUPLE_SIZE				1024 // in bytes
 #define MAX_FIELD_SIZE              50
@@ -143,20 +145,20 @@
 // SYNTH_TABLE_SIZE: tuple count of the YCSB table
 //#define SYNTH_TABLE_SIZE 100
 #define SYNTH_TABLE_SIZE            10000000
-#define ZIPF_THETA                  0.9
-#define READ_PERC                   0.5
-#define WRITE_PERC 					0.5  // if want no scan, write + read >= 1
+#define ZIPF_THETA                  0.5
+#define READ_PERC                   1
+#define WRITE_PERC 					0  // if want no scan, write + read >= 1
 #define SCAN_PERC 					0
 #define SCAN_LEN					20
 #define PART_PER_TXN 				1
 #define PERC_MULTI_PART				1
-//REQ_PER_QUERY: request count of a txn
-#define REQ_PER_QUERY               15
+//REQ_PER_QUERY: request count of a txn (short/normal transaction in YCSB)
+#define REQ_PER_QUERY               10
 #define LONG_TXN_RATIO              0
-#define LONG_TXN_READ_RATIO			0.5
+#define LONG_TXN_READ_RATIO			1
 #define FIELD_PER_TUPLE				10
 // ==== [YCSB-synthetic] ====
-#define SYNTHETIC_YCSB              false
+#define SYNTHETIC_YCSB              true
 #define POS_HS                      TOP
 #define SPECIFIED_RATIO             0
 #define FLIP_RATIO                  0
