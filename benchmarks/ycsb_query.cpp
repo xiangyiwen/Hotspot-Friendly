@@ -170,24 +170,44 @@ uint64_t table_size = g_synth_table_size / g_virtual_part_cnt;              // g
                     // insert hotpost at the beginning
                     req->rtype = FIRST_HS;
                     row_id = table_size - 1;
+
+                    // 2-26: Support read_only long transaction in synthetic YCSB. Reset its request type.
+                    if(is_long && g_long_txn_read_ratio == 1){
+                        req->rtype = RD;
+                    }
                 } else {
               #elif POS_HS == MID
                 if (tmp == (g_req_per_query / 2)) {
                     // insert hotpost at the middle
                     req->rtype = FIRST_HS;
                     row_id = table_size - 1;
+
+                    // 2-26: Support read_only long transaction in synthetic YCSB. Reset its request type.
+                    if(is_long && g_long_txn_read_ratio == 1){
+                        req->rtype = RD;
+                    }
                 } else {
               #elif POS_HS == BOT
                 if (tmp == (g_req_per_query - 1)) {
                     // insert hotpost at the bottom
                     req->rtype = FIRST_HS;
                     row_id = table_size - 1;
+
+                    // 2-26: Support read_only long transaction in synthetic YCSB. Reset its request type.
+                    if(is_long && g_long_txn_read_ratio == 1){
+                        req->rtype = RD;
+                    }
                 } else {
               #elif POS_HS == SPECIFIED
                 UInt32 hs_idx = (UInt32) min((int)g_req_per_query-1, max(1, (int) floor(g_req_per_query * g_specified_ratio)));
                 if (tmp == hs_idx) {
                     req->rtype = FIRST_HS;
                     row_id = table_size - 1;
+
+                    // 2-26: Support read_only long transaction in synthetic YCSB. Reset its request type.
+                    if(is_long && g_long_txn_read_ratio == 1){
+                        req->rtype = RD;
+                    }
                 } else {
               #else
                 assert(false);
@@ -206,18 +226,38 @@ uint64_t table_size = g_synth_table_size / g_virtual_part_cnt;              // g
                     // insert hotpost at the beginning
                     req->rtype = FIRST_HS;
                     row_id = hs1_row_id;
+
+                    // 2-26: Support read_only long transaction in synthetic YCSB. Reset its request type.
+                    if(is_long && g_long_txn_read_ratio == 1){
+                        req->rtype = RD;
+                    }
                 } else if (tmp == (g_req_per_query / 2)) {
                     req->rtype = SECOND_HS;
                     row_id = hs2_row_id;
+
+                    // 2-26: Support read_only long transaction in synthetic YCSB. Reset its request type.
+                    if(is_long && g_long_txn_read_ratio == 1){
+                        req->rtype = RD;
+                    }
                 } else {
               #elif POS_HS == MB
                 if (tmp == (g_req_per_query / 2)) {
                     // insert hotpost at the middle
                     req->rtype = FIRST_HS;
                     row_id = hs1_row_id;
+
+                    // 2-26: Support read_only long transaction in synthetic YCSB. Reset its request type.
+                    if(is_long && g_long_txn_read_ratio == 1){
+                        req->rtype = RD;
+                    }
                 } else if (tmp == (g_req_per_query - 1)) {
                     req->rtype = SECOND_HS;
                     row_id = hs2_row_id;
+
+                    // 2-26: Support read_only long transaction in synthetic YCSB. Reset its request type.
+                    if(is_long && g_long_txn_read_ratio == 1){
+                        req->rtype = RD;
+                    }
                 } else {
               #elif POS_HS == SPECIFIED
                #if FIXED_HS == 0       // Fix one hotspot to TOP, and modify another hotspot
@@ -231,9 +271,19 @@ uint64_t table_size = g_synth_table_size / g_virtual_part_cnt;              // g
                     // insert hotpost at the beginning
                     req->rtype = FIRST_HS;
                     row_id = hs1_row_id;
+
+                    // 2-26: Support read_only long transaction in synthetic YCSB. Reset its request type.
+                    if(is_long && g_long_txn_read_ratio == 1){
+                        req->rtype = RD;
+                    }
                 } else if (tmp == hs2_idx) {
                     req->rtype = SECOND_HS;
                     row_id = hs2_row_id;
+
+                    // 2-26: Support read_only long transaction in synthetic YCSB. Reset its request type.
+                    if(is_long && g_long_txn_read_ratio == 1){
+                        req->rtype = RD;
+                    }
                 } else {
               #else
                 assert(false);
@@ -250,14 +300,29 @@ uint64_t table_size = g_synth_table_size / g_virtual_part_cnt;              // g
                 if (tmp == (g_req_per_query-1)) {
                     req->rtype = FIRST_HS;
                     row_id = hs2_row_id;
+
+                    // 2-26: Support read_only long transaction in synthetic YCSB. Reset its request type.
+                    if(is_long && g_long_txn_read_ratio == 1){
+                        req->rtype = RD;
+                    }
                 }
                 else if (tmp == (g_req_per_query - 2)) {
                     req->rtype = FIRST_HS;
                     row_id = hs1_row_id;
+
+                    // 2-26: Support read_only long transaction in synthetic YCSB. Reset its request type.
+                    if(is_long && g_long_txn_read_ratio == 1){
+                        req->rtype = RD;
+                    }
                 }
                 else if (tmp == (g_req_per_query - 3)) {
                     req->rtype = FIRST_HS;
                     row_id = table_size - 3;
+
+                    // 2-26: Support read_only long transaction in synthetic YCSB. Reset its request type.
+                    if(is_long && g_long_txn_read_ratio == 1){
+                        req->rtype = RD;
+                    }
                 } else {
             #endif
         #endif
