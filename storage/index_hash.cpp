@@ -53,6 +53,11 @@ IndexHash::get_latch(BucketHeader * bucket, access_t access) {
 }
 
 RC IndexHash::index_insert(idx_key_t key, itemid_t * item, int part_id) {
+    //  2-27 DEBUG
+//    if(key == g_synth_table_size-1){
+//        printf("Hotspot is inserted!");
+//    }
+
   RC rc = RCOK;
   uint64_t bkt_idx = hash(key);
   assert(bkt_idx < _bucket_cnt_per_part);
@@ -144,10 +149,11 @@ void BucketHeader::read_item(idx_key_t key, itemid_t * &item, const char * tname
     cur_node = cur_node->next;
   }
   //ADD: cur_node can be NULL
-  if(!cur_node) {
-      item = NULL;
-      return;
-  }
+  // 2-27 : cur_node will never be NULL, because YCSB always access an existed tuple.
+//  if(!cur_node) {
+//      item = NULL;
+//      return;
+//  }
 
   M_ASSERT(cur_node->key == key, "Key does not exist!");
   item = cur_node->items;

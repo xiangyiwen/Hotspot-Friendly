@@ -58,8 +58,9 @@ RC ycsb_txn_man::run_txn(base_query * query) {
             if (iteration == 0) {
                 m_item = index_read(_wl->the_index, req->key, part_id);
                 // ADD: there can be no corresponding data
-                if (m_item == NULL)
-                    break;
+                // 2-27 : cur_node will never be NULL, because YCSB always access an existed tuple.
+//                if (m_item == NULL)
+//                    break;
             }
 
             #if INDEX_STRUCT == IDX_BTREE
