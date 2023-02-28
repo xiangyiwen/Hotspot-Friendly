@@ -41,7 +41,7 @@
 /***********************************************/
 // WAIT_DIE, NO_WAIT, DL_DETECT, TIMESTAMP, MVCC, HEKATON, HSTORE, OCC, VLL, TICTOC, SILO, SLER , BAMBOO
 // TODO TIMESTAMP does not work at this moment
-#define CC_ALG                      WAIT_DIE
+#define CC_ALG                      SLER
 #define ISOLATION_LEVEL 			SERIALIZABLE
 
 // latch options
@@ -146,8 +146,8 @@
 //#define SYNTH_TABLE_SIZE 100
 #define SYNTH_TABLE_SIZE            10000000
 #define ZIPF_THETA                  0.5
-#define READ_PERC                   1
-#define WRITE_PERC 					0  // if want no scan, write + read >= 1
+#define READ_PERC                   0.5
+#define WRITE_PERC 					0.5  // if want no scan, write + read >= 1
 #define SCAN_PERC 					0
 #define SCAN_LEN					20
 #define PART_PER_TXN 				1
@@ -157,11 +157,11 @@
 
 //REQ_PER_QUERY: request count of a txn (short/normal transaction in YCSB)
 #define REQ_PER_QUERY               10
-#define LONG_TXN_RATIO              0
+#define LONG_TXN_RATIO              0.1
 #define LONG_TXN_READ_RATIO			1
 #define FIELD_PER_TUPLE				10
 // ==== [YCSB-synthetic] ====
-#define SYNTHETIC_YCSB              true
+#define SYNTHETIC_YCSB              false
 #define POS_HS                      TOP
 #define SPECIFIED_RATIO             0
 #define FLIP_RATIO                  0
