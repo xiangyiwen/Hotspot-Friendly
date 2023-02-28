@@ -65,6 +65,12 @@ void txn_man::init(thread_t * h_thd, workload * h_wl, uint64_t thd_id) {
     bloom_filter temp_bloom(parameters);
     sler_waiting_set = temp_bloom;
 
+    // 2-27 Optimization for read_only long transaction.
+#if READ_ONLY_OPTIMIZATION_ENABLE
+    is_long = false;
+    read_only = false;
+#endif
+
 #endif
 
     num_accesses_alloc = 0;
@@ -181,6 +187,12 @@ void txn_man::cleanup(RC rc) {
     wr_cnt = 0;
     insert_cnt = 0;
 //    write_row_cnt = 0;
+
+    // 2-27 Optimization for read_only long transaction.
+#if READ_ONLY_OPTIMIZATION_ENABLE
+    is_long = false;
+    read_only = false;
+#endif
 
     //12-13 for READ_WRITE test can pass the assertion
 #if WORKLOAD == TEST

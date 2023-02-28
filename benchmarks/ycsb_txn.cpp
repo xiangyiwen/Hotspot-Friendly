@@ -33,6 +33,14 @@ RC ycsb_txn_man::run_txn(base_query * query) {
     row_cnt = 0;
 #endif
 
+    // 2-27 Optimization for read_only long transaction.
+#if CC_ALG == SLER && READ_ONLY_OPTIMIZATION_ENABLE
+    is_long = m_query->is_long;
+    if(m_query->local_read_perc == 1)
+        read_only = true;
+#endif
+
+
     // if long txn and not rerun aborted txn, generate queries
     if (unlikely(m_query->is_long && !(m_query->rerun))) {
         uint64_t starttime = get_sys_clock();

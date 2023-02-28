@@ -173,6 +173,11 @@ class txn_man
 //    atomic<uint64_t>    sler_semaphore;
     uint64_t            sler_semaphore;            // 2-16 DEBUG : The read operation of int64 is atomic.
 
+#if READ_ONLY_OPTIMIZATION_ENABLE
+    // 2-27 Optimization for read_only long transaction.
+    bool                is_long;
+    bool                read_only;
+#endif
 
     //12-6 DEBUG
 //    int                 uncommitted_cnt;

@@ -152,6 +152,9 @@
 #define SCAN_LEN					20
 #define PART_PER_TXN 				1
 #define PERC_MULTI_PART				1
+// Optional optimization for read_only long transaction.
+#define READ_ONLY_OPTIMIZATION_ENABLE false
+
 //REQ_PER_QUERY: request count of a txn (short/normal transaction in YCSB)
 #define REQ_PER_QUERY               10
 #define LONG_TXN_RATIO              0

@@ -61,6 +61,29 @@ void Row_sler::init(row_t *row){
  */
 RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 
+    // 2-27 Optimization for read_only long transaction.
+#if READ_ONLY_OPTIMIZATION_ENABLE
+    if(txn->is_long && txn->read_only){
+        while(!ATOM_CAS(blatch, false, true)){
+            PAUSE
+        }
+
+        Version* read_only_version = version_header;
+        while (read_only_version){
+            if(read_only_version->begin_ts != UINT64_MAX){
+                assert(read_only_version->retire == NULL);
+                access->tuple_version = read_only_version;
+                break;
+            }
+            read_only_version = read_only_version->next;
+        }
+
+        blatch = false;
+
+        return RCOK;
+    }
+#endif
+
     RC rc = RCOK;
     uint64_t txn_id = txn->get_sler_txn_id();
     txn_man* retire_txn;
