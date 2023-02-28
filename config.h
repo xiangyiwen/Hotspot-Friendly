@@ -146,8 +146,8 @@
 //#define SYNTH_TABLE_SIZE 100
 #define SYNTH_TABLE_SIZE            10000000
 #define ZIPF_THETA                  0.5
-#define READ_PERC                   0.5
-#define WRITE_PERC 					0.5  // if want no scan, write + read >= 1
+#define READ_PERC                   1
+#define WRITE_PERC 					0  // if want no scan, write + read >= 1
 #define SCAN_PERC 					0
 #define SCAN_LEN					20
 #define PART_PER_TXN 				1
@@ -157,11 +157,11 @@
 
 //REQ_PER_QUERY: request count of a txn (short/normal transaction in YCSB)
 #define REQ_PER_QUERY               10
-#define LONG_TXN_RATIO              0.1
+#define LONG_TXN_RATIO              0
 #define LONG_TXN_READ_RATIO			1
 #define FIELD_PER_TUPLE				10
 // ==== [YCSB-synthetic] ====
-#define SYNTHETIC_YCSB              false
+#define SYNTHETIC_YCSB              true
 #define POS_HS                      TOP
 #define SPECIFIED_RATIO             0
 #define FLIP_RATIO                  0
@@ -169,6 +169,10 @@
 #define FIRST_HS                    WR
 #define SECOND_HS                   WR
 #define FIXED_HS                    0
+// Different ratio of operation type for hotspot
+#define READ_HOTSPOT_RATIO          0.5
+#define WRITE_HOTSPOT_RATIO         0.5
+
 // ==== [TPCC] ====
 // For large warehouse count, the tables do not fit in memory
 // small tpcc schemas shrink the table size.
