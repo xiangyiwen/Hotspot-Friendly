@@ -270,7 +270,9 @@ RC row_t::get_row(access_t type, txn_man * txn, row_t *& row, Access * access) {
       }
       rc = this->manager->lock_get(lt, txn, access);
       #else
+      #if CC_ALG != NO_WAIT
       assert(txn->get_ts() != 0);
+      #endif
       rc = this->manager->lock_get(lt, txn, access);
       #endif
 
