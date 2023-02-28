@@ -185,6 +185,11 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                 assert(version_header->retire_ID == retire_txn->sler_txn_id);          //11-18
 
                 // [DeadLock]
+                // 2-28 Reduce percentage of wrong killing in single hotspot scene.
+//                if (retire_txn->WaitingSetContains(txn_id)
+//                    && (txn->sler_semaphore != 0 || !txn->sler_dependency.empty())
+//                    && retire_txn->set_abort() == RUNNING) {
+
                 if (retire_txn->WaitingSetContains(txn_id) && retire_txn->set_abort() == RUNNING) {
 
                     // 12-5 DEBUG
@@ -386,6 +391,10 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                     assert(version_header->retire_ID == retire_txn->sler_txn_id);          //11-18
 
                     // [DeadLock]
+// 2-28 Reduce percentage of wrong killing in single hotspot scene.
+//                if (retire_txn->WaitingSetContains(txn_id)
+//                    && (txn->sler_semaphore != 0 || !txn->sler_dependency.empty())
+//                    && retire_txn->set_abort() == RUNNING) {
                     if (retire_txn->WaitingSetContains(txn_id) && retire_txn->set_abort() == RUNNING) {
 
                         // 12-5 DEBUG

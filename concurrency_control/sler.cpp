@@ -82,6 +82,10 @@ RC txn_man::validate_sler(RC rc) {
 //        int dp_size = dependency_cnt;
 //        int debug_i =0 ;
 
+        // 2-28 Reduce percentage of wrong killing in single hotspot scene..
+//        uint64_t span = get_sys_clock() - starttime;
+//        if(span > 10000){
+
         //12-6 [Check Deadlock again]: Make sure the workload can finish.
         for(auto & dep_pair : sler_dependency) {
             if(!dep_pair.dep_type){               // we may get an element before it being initialized(empty data / wrong data)
@@ -138,6 +142,9 @@ RC txn_man::validate_sler(RC rc) {
                 return Abort;
             }
         }
+
+        //        }
+
 
         // [Timeout]: Make sure the workload can finish.
 //        uint64_t span = get_sys_clock() - starttime;
