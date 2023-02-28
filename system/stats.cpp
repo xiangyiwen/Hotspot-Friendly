@@ -62,6 +62,12 @@ void Stats::init() {
     dl_wait_time = 0;
     deadlock = 0;
     cycle_detect = 0;
+
+    created_long_txn_cnt = (int*)_mm_malloc(sizeof(int) * g_thread_cnt, 64);
+    for(int i = 0; i < g_thread_cnt;i++){
+        created_long_txn_cnt[i] = 0;
+    }
+
 }
 
 /**
@@ -146,9 +152,9 @@ void Stats::print() {
     for (uint64_t tid = 0; tid < g_thread_cnt; tid ++) {
         ALL_METRICS(SUM_UP_STATS, SUM_UP_STATS, MAX_STATS)
         // print the proccessing result of each thread to terminal
-        printf("[tid=%lu] txn_cnt=%lu,abort_cnt=%lu, user_abort_cnt=%lu\n",
+        printf("[tid=%lu] txn_cnt=%lu,abort_cnt=%lu, user_abort_cnt=%lu, txn_cnt_long=%lu,abort_cnt_long=%lu, created_long_txn_cnt=%d\n",
             tid, _stats[tid]->txn_cnt, _stats[tid]->abort_cnt,
-            _stats[tid]->user_abort_cnt);
+            _stats[tid]->user_abort_cnt, _stats[tid]->txn_cnt_long, _stats[tid]->abort_cnt_long,  created_long_txn_cnt[tid]);
     }
 
     // Calculate the average value.

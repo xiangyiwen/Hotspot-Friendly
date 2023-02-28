@@ -78,6 +78,8 @@ class Stats {
   uint64_t cycle_detect;
   uint64_t deadlock;
 
+  int * created_long_txn_cnt;
+
   void init();
   void init(uint64_t thread_id);
   void clear(uint64_t tid);
