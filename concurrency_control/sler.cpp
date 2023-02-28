@@ -140,14 +140,14 @@ RC txn_man::validate_sler(RC rc) {
         }
 
         // [Timeout]: Make sure the workload can finish.
-        uint64_t span = get_sys_clock() - starttime;
-        if(span > 10000){
-
-//            printf("txn_id:%lu,validate_time: %lu\n",sler_txn_id,span);
-
-            abort_process(this);
-            return Abort;
-        }
+//        uint64_t span = get_sys_clock() - starttime;
+//        if(span > 10000){
+//
+////            printf("txn_id:%lu,validate_time: %lu\n",sler_txn_id,span);
+//
+//            abort_process(this);
+//            return Abort;
+//        }
     }
 
 
