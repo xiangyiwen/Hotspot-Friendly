@@ -19,8 +19,13 @@ void ycsb_query::init(uint64_t thd_id, workload * h_wl, Query_thd * query_thd) {
 	_query_thd = query_thd;
 	local_read_perc = g_read_perc;
 	local_req_per_query = REQ_PER_QUERY;
-	double x = (double)(rand() % 100) / 100.0;
-	if (x < g_long_txn_ratio) {
+
+    //[BUG in BAMBOO]: The original x is not a qualified random data.
+    //	double x = (double)(rand() % 100) / 100.0;
+    double x;
+    drand48_r(&_query_thd->buffer, &x);
+
+    if (x < g_long_txn_ratio) {
 		local_req_per_query = MAX_ROW_PER_TXN;              // assign the count of requests as MAX_ROW_PER_TXN
 		local_read_perc = g_long_txn_read_ratio;
 		// XXX(zhihan): point requests and part to access to a pre-allocate
@@ -31,6 +36,10 @@ void ycsb_query::init(uint64_t thd_id, workload * h_wl, Query_thd * query_thd) {
 #endif
         is_long = true; // used to identify long txn
         zeta_2_theta = zeta(2, g_zipf_theta);
+
+        //2-27 A new auxiliary metric.
+        stats.created_long_txn_cnt[thd_id]++;
+
         return;
 	} else {
         requests = (ycsb_request *)mem_allocator.alloc(sizeof(ycsb_request) * local_req_per_query, thd_id);
