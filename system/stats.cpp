@@ -142,50 +142,83 @@ void Stats::abort(uint64_t thd_id) {
 }
 
 /**
- * Calculate processing results of this workload.
+ * Calculate processing results_background of this workload.
  */
 void Stats::print() {
     // Declare and initialize total_XX metrics for every metric.
     ALL_METRICS(INIT_TOTAL_VAR, INIT_TOTAL_VAR, INIT_TOTAL_VAR)
 
     // Calculate the sum of x&y metrics and the max of z metric.
-    for (uint64_t tid = 0; tid < g_thread_cnt; tid ++) {
-        ALL_METRICS(SUM_UP_STATS, SUM_UP_STATS, MAX_STATS)
-        // print the proccessing result of each thread to terminal
-        printf("[tid=%lu] txn_cnt=%lu,abort_cnt=%lu, user_abort_cnt=%lu, txn_cnt_long=%lu,abort_cnt_long=%lu, created_long_txn_cnt=%d\n",
-            tid, _stats[tid]->txn_cnt, _stats[tid]->abort_cnt,
-            _stats[tid]->user_abort_cnt, _stats[tid]->txn_cnt_long, _stats[tid]->abort_cnt_long,  created_long_txn_cnt[tid]);
-    }
+//    for (uint64_t tid = 0; tid < g_thread_cnt; tid ++) {
+//        ALL_METRICS(SUM_UP_STATS, SUM_UP_STATS, MAX_STATS)
+//        // print the proccessing result of each thread to terminal
+//        printf("[tid=%lu] txn_cnt=%lu,abort_cnt=%lu, user_abort_cnt=%lu, txn_cnt_long=%lu,abort_cnt_long=%lu, created_long_txn_cnt=%d\n",
+//            tid, _stats[tid]->txn_cnt, _stats[tid]->abort_cnt,
+//            _stats[tid]->user_abort_cnt, _stats[tid]->txn_cnt_long, _stats[tid]->abort_cnt_long,  created_long_txn_cnt[tid]);
+//    }
 
     // Calculate the average value.
     // Todo: Notice that the value of these three metrics(latency,commit_latency,time_man) isn't divided by BILLION,
     //  because it is already very small. Once we divide it, they will all equal to 0.
-    total_latency = total_latency / total_txn_cnt;
-    total_commit_latency = total_commit_latency / total_txn_cnt;
-    total_time_man = total_time_man - total_time_wait;
+//    total_latency = total_latency / total_txn_cnt;
+//    total_commit_latency = total_commit_latency / total_txn_cnt;
+//    total_time_man = total_time_man - total_time_wait;
 
     if (output_file != NULL) {
-        ofstream outf(output_file);
+        ofstream outf(output_file,ios::app);
         if (outf.is_open()) {
+            for (uint64_t tid = 0; tid < g_thread_cnt; tid ++) {
+                ALL_METRICS(SUM_UP_STATS, SUM_UP_STATS, MAX_STATS)
+                // print the proccessing result of each thread to terminal
+                outf << "[tid=" << tid << "] ";
+                outf << "txn_cnt=" << _stats[tid]->txn_cnt << ", ";
+                outf << "abort_cnt=" << _stats[tid]->abort_cnt << ", ";
+                outf << "user_abort_cnt=" << _stats[tid]->user_abort_cnt << ", ";
+                outf << "txn_cnt_long=" << _stats[tid]->txn_cnt_long << ", ";
+                outf << "abort_cnt_long=" << _stats[tid]->abort_cnt_long << ", ";
+                outf << "created_long_txn_cnt=" << created_long_txn_cnt[tid] << "\n";
+            }
+
+            total_latency = total_latency / total_txn_cnt;
+            total_commit_latency = total_commit_latency / total_txn_cnt;
+            total_time_man = total_time_man - total_time_wait;
+
             outf << "[summary] throughput=" << total_txn_cnt / total_run_time * BILLION * THREAD_CNT << ", ";
+            outf << "abort_rate=" << (double)total_abort_cnt / (double)(total_abort_cnt + total_txn_cnt) << ", ";
             ALL_METRICS(WRITE_STAT_X, WRITE_STAT_Y, WRITE_STAT_Y)
             outf << "deadlock_cnt=" << deadlock << ", ";
             outf << "cycle_detect=" << cycle_detect << ", ";
             outf << "dl_detect_time=" << dl_detect_time / BILLION << ", ";
-            outf << "dl_wait_time=" << dl_wait_time / BILLION << "\n";
+            outf << "dl_wait_time=" << dl_wait_time / BILLION << "\n\n";
             outf.close();
         }
-    }
+    }else {
 
-    std::cout << "[summary] throughput=" << total_txn_cnt / total_run_time * BILLION * THREAD_CNT << ", ";
-    ALL_METRICS(PRINT_STAT_X, PRINT_STAT_Y, PRINT_STAT_Y)
-    std::cout << "deadlock_cnt=" << deadlock << ", ";
-    std::cout << "cycle_detect=" << cycle_detect << ", ";
-    std::cout << "dl_detect_time=" << dl_detect_time / BILLION << ", ";
-    std::cout << "dl_wait_time=" << dl_wait_time / BILLION << "\n";
+        for (uint64_t tid = 0; tid < g_thread_cnt; tid ++) {
+            ALL_METRICS(SUM_UP_STATS, SUM_UP_STATS, MAX_STATS)
+            // print the proccessing result of each thread to terminal
+            printf("[tid=%lu] txn_cnt=%lu,abort_cnt=%lu, user_abort_cnt=%lu, txn_cnt_long=%lu,abort_cnt_long=%lu, created_long_txn_cnt=%d\n",
+                   tid, _stats[tid]->txn_cnt, _stats[tid]->abort_cnt,
+                   _stats[tid]->user_abort_cnt, _stats[tid]->txn_cnt_long, _stats[tid]->abort_cnt_long,  created_long_txn_cnt[tid]);
+        }
+
+        total_latency = total_latency / total_txn_cnt;
+        total_commit_latency = total_commit_latency / total_txn_cnt;
+        total_time_man = total_time_man - total_time_wait;
+
+        std::cout << "[summary] throughput=" << total_txn_cnt / total_run_time * BILLION * THREAD_CNT << ", ";
+        std::cout << "abort_rate=" << (double)total_abort_cnt / (double)(total_abort_cnt + total_txn_cnt) << ", ";
+        ALL_METRICS(PRINT_STAT_X, PRINT_STAT_Y, PRINT_STAT_Y)
+        std::cout << "deadlock_cnt=" << deadlock << ", ";
+        std::cout << "cycle_detect=" << cycle_detect << ", ";
+        std::cout << "dl_detect_time=" << dl_detect_time / BILLION << ", ";
+        std::cout << "dl_wait_time=" << dl_wait_time / BILLION << "\n";
+    }
     if (g_prt_lat_distr)      // g_prt_lat_distr == false
         print_lat_distr();
 }
+
+
 
 /**
  * Print the transaction latency distribution.

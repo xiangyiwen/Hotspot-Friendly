@@ -66,7 +66,44 @@ double g_perc_orderstatus = PERC_ORDERSTATUS;
 double g_perc_stocklevel = PERC_STOCKLEVEL;
 double g_perc_neworder = 1 - (g_perc_payment + g_perc_delivery + g_perc_orderstatus + g_perc_stocklevel);
 bool g_wh_update = WH_UPDATE;
-char * output_file = NULL;
+//char * output_file = NULL;
+
+
+#if CC_ALG == WOUND_WAIT
+string cc_name = "WOUND_WAIT";
+#elif CC_ALG == NO_WAIT
+string cc_name = "NO_WAIT";
+#elif CC_ALG == WAIT_DIE
+string cc_name = "WAIT_DIE";
+#elif CC_ALG == BAMBOO
+string cc_name = "BAMBOO";
+#elif CC_ALG == SILO
+string cc_name = "SILO";
+#elif CC_ALG == TICTOC
+string cc_name = "TICTOC";
+#elif CC_ALG == HEKATON
+string cc_name = "HEKATON";
+#elif CC_ALG == SLER
+string cc_name = "SLER";
+#endif
+
+
+#if TEST_NUM == 1
+string test_num = "1";
+#elif TEST_NUM == 2
+string test_num = "2";
+#elif TEST_NUM == 3
+string test_num = "3";
+#elif TEST_NUM == 4
+string test_num = "4";
+#endif
+
+//string temp ="/home/xyw/SLER/Bamboo-Public-dbx1000-bamboo/results_background/test_"+ test_num + "_" + cc_name +".txt";
+//string temp ="/home/xyw/SLER/Bamboo-Public-dbx1000-bamboo/results_synthetic_ycsb/test_"+ test_num + "_" + cc_name +".txt";
+//string temp ="/home/xyw/SLER/Bamboo-Public-dbx1000-bamboo/results_YCSB/test_"+ test_num + "_" + cc_name +".txt";
+string temp ="/home/xyw/SLER/Bamboo-Public-dbx1000-bamboo/results_TPCC/test_"+ test_num + "_" + cc_name +".txt";
+
+char * output_file = const_cast<char *>(temp.c_str());
 
 map<string, string> g_params;
 
