@@ -88,6 +88,11 @@ RC txn_man::validate_sler(RC rc) {
 
         //12-6 [Check Deadlock again]: Make sure the workload can finish.
         for(auto & dep_pair : sler_dependency) {
+            if(status == ABORTED){
+                abort_process(this);
+                return Abort;
+            }
+
             if(!dep_pair.dep_type){               // we may get an element before it being initialized(empty data / wrong data)
                 break;
             }
@@ -146,11 +151,15 @@ RC txn_man::validate_sler(RC rc) {
         //        }
 
 
-        // [Timeout]: Make sure the workload can finish.
+////         [Timeout]: Make sure the workload can finish.[1 ms(a transaction's average execution time is 0.16ms)]
 //        uint64_t span = get_sys_clock() - starttime;
-//        if(span > 10000){
+//        if(span > 0.5*1000000UL){
 //
-////            printf("txn_id:%lu,validate_time: %lu\n",sler_txn_id,span);
+//            printf("txn_id: %lu, semaphore: %ld, status: %d, validate_time: %lu\n", sler_txn_id,sler_semaphore,status,span);
+////            printf("semaphore: %ld;\n",sler_semaphore);
+//
+////            printf("waiting_list size = %zu, release_cnt = %zu\n",wait_list.size(),dep_debug.size());
+//
 //
 //            abort_process(this);
 //            return Abort;
@@ -418,6 +427,7 @@ RC txn_man::validate_sler(RC rc) {
      // Update status.
      while(!ATOM_CAS(status_latch, false, true))
          PAUSE
+
      assert(status == validating);
      ATOM_CAS(status, validating, writing);
      status_latch = false;
@@ -508,6 +518,7 @@ RC txn_man::validate_sler(RC rc) {
 void txn_man::abort_process(txn_man * txn){
     while(!ATOM_CAS(status_latch, false, true))
         PAUSE
+
     assert(status == RUNNING || status == ABORTED || status == validating);
     status = ABORTED;
     status_latch = false;

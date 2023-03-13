@@ -422,8 +422,27 @@ class txn_man
     }
 
     //update waiting_set
+    // 3-13 debug: This should be a recursive call. Or there may be a deadlock.
     void UnionWaitingSet(const bloom_filter& wait_set){
         sler_waiting_set |= wait_set;
+
+        //更新依赖链表中所有事务的 waiting_set
+//        auto deps = this->sler_dependency;
+        for (auto &dep_pair: sler_dependency) {
+            if (!dep_pair.dep_type) {                    // we may get an element before it being initialized(empty data / wrong data)
+                break;
+            }
+            assert(dep_pair.dep_type != READ_WRITE_);
+
+            // There's already a deadlock.
+            if (WaitingSetContains(dep_pair.dep_txn->sler_txn_id) && dep_pair.dep_txn->status == RUNNING) {
+                set_abort();
+            }else {
+                if (dep_pair.dep_txn->get_sler_txn_id() == dep_pair.dep_txn_id && dep_pair.dep_txn->status == RUNNING) {           // Don't inform the txn_manager who is already running a new txn.
+                    dep_pair.dep_txn->UnionWaitingSet(sler_waiting_set);
+                }
+            }
+        }
     }
 
     void SemaphoreAddOne() {

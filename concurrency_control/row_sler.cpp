@@ -237,19 +237,24 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                             // Update waiting set
                             txn->UnionWaitingSet(retire_txn->sler_waiting_set);
 
-                            //更新依赖链表中所有事务的 waiting_set
-                            auto deps = txn->sler_dependency;
-                            for (auto &dep_pair: txn->sler_dependency) {
-                                if (!dep_pair.dep_type) {                    // we may get an element before it being initialized(empty data / wrong data)
-                                    break;
-                                }
-                                assert(dep_pair.dep_type != READ_WRITE_);
-
-                                if (dep_pair.dep_txn->get_sler_txn_id() ==
-                                    dep_pair.dep_txn_id) {           // Don't inform the txn_manager who is already running a new txn.
-                                    dep_pair.dep_txn->UnionWaitingSet(txn->sler_waiting_set);
-                                }
+                            if(txn->status == ABORTED){
+                                rc = Abort;
+                                break;
                             }
+
+//                            //更新依赖链表中所有事务的 waiting_set
+//                            auto deps = txn->sler_dependency;
+//                            for (auto &dep_pair: txn->sler_dependency) {
+//                                if (!dep_pair.dep_type) {                    // we may get an element before it being initialized(empty data / wrong data)
+//                                    break;
+//                                }
+//                                assert(dep_pair.dep_type != READ_WRITE_);
+//
+//                                if (dep_pair.dep_txn->get_sler_txn_id() ==
+//                                    dep_pair.dep_txn_id) {           // Don't inform the txn_manager who is already running a new txn.
+//                                    dep_pair.dep_txn->UnionWaitingSet(txn->sler_waiting_set);
+//                                }
+//                            }
                         }
                         // 11-8 ---------------------------------------------------------------------
 
@@ -451,19 +456,24 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                                 // Update waiting set
                                 txn->UnionWaitingSet(retire_txn->sler_waiting_set);
 
-                                //更新依赖链表中所有事务的 waiting_set
-                                auto deps = txn->sler_dependency;
-                                for (auto &dep_pair: txn->sler_dependency) {
-                                    if (!dep_pair.dep_type) {                    // we may get an element before it being initialized(empty data / wrong data)
-                                        break;
-                                    }
-                                    assert(dep_pair.dep_type != READ_WRITE_);
-
-                                    if (dep_pair.dep_txn->get_sler_txn_id() ==
-                                        dep_pair.dep_txn_id) {           // Don't inform the txn_manager who is already running a new txn.
-                                        dep_pair.dep_txn->UnionWaitingSet(txn->sler_waiting_set);
-                                    }
+                                if(txn->status == ABORTED){
+                                    rc = Abort;
+                                    break;
                                 }
+
+//                                //更新依赖链表中所有事务的 waiting_set
+//                                auto deps = txn->sler_dependency;
+//                                for (auto &dep_pair: txn->sler_dependency) {
+//                                    if (!dep_pair.dep_type) {                    // we may get an element before it being initialized(empty data / wrong data)
+//                                        break;
+//                                    }
+//                                    assert(dep_pair.dep_type != READ_WRITE_);
+//
+//                                    if (dep_pair.dep_txn->get_sler_txn_id() ==
+//                                        dep_pair.dep_txn_id) {           // Don't inform the txn_manager who is already running a new txn.
+//                                        dep_pair.dep_txn->UnionWaitingSet(txn->sler_waiting_set);
+//                                    }
+//                                }
                             }
                             // 11-8 ---------------------------------------------------------------------
 
