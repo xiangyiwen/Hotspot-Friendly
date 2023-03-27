@@ -60,6 +60,13 @@ void txn_man::init(thread_t * h_thd, workload * h_wl, uint64_t thd_id) {
     parameters.projected_element_count = 5;
     parameters.false_positive_probability = 0.05;
 
+//    auto projected_ele_cnt = THREAD_CNT >= 40 ? 40: THREAD_CNT;
+//    parameters.projected_element_count = projected_ele_cnt;
+
+//    parameters.projected_element_count = THREAD_CNT;
+
+//    parameters.false_positive_probability = FALSE_POSITIVE_PROBABILITY;
+
     parameters.compute_optimal_parameters();
 
     bloom_filter temp_bloom(parameters);
