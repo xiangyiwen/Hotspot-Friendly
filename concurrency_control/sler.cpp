@@ -524,109 +524,30 @@ void txn_man::abort_process(txn_man * txn){
     status_latch = false;
 
 #ifdef ABORT_OPTIMIZATION
-// 11-28
     if(wr_cnt != 0){
         for(int rid = 0; rid < row_cnt; rid++){
             if(accesses[rid]->type == RD){
                 continue;
             }
 
-            // 11-22: We record new version in read_write_set. [Bug: we should first take the lock, otherwise old_version may be a wrong version]
-//            Version* new_version = (Version*)accesses[rid]->tuple_version;
-//            Version* old_version = new_version->next;
-
-/*
-//            while (!ATOM_CAS(accesses[rid]->orig_row->manager->blatch, false, true)){
-//                PAUSE
-//            }
- */
-
+            // We record new version in read_write_set.
             Version* new_version = (Version*)accesses[rid]->tuple_version;
             Version* old_version;
-
-            assert(new_version->begin_ts == UINT64_MAX && new_version->retire == this);
-
             Version* row_header;
 
-            /* 3-27
-            // new version is the newest version
-            if(new_version == row_header) {
-                if (new_version->prev == NULL) {
-                    accesses[rid]->orig_row->manager->version_header = old_version;
-                    assert(accesses[rid]->orig_row->manager->version_header->end_ts == INF);
-
-                    assert(old_version->prev == new_version);
-                    old_version->prev = NULL;
-                    new_version->next = NULL;
-                }
-                else{
-                    accesses[rid]->orig_row->manager->version_header = old_version;
-                    assert(accesses[rid]->orig_row->manager->version_header->end_ts == INF);
-
-                    assert(old_version->prev == new_version);
-                    old_version->prev = new_version->prev;
-                    new_version->prev->next = old_version;
-
-                    new_version->prev = NULL;
-                    new_version->next = NULL;
-                }
-            }
-            else{
-                Version* pre_new = new_version->prev;
-                if(pre_new){
-                    pre_new->next = old_version;
-                }
-                if(old_version->prev == new_version){
-                    // I think (old_version->prev == new_version) is always true.
-                    old_version->prev = pre_new;
-                }
-                new_version->prev = NULL;
-                new_version->next = NULL;
-            }
-
-
-//        new_version->row->free_row();
-//        _mm_free(new_version->row);
-//        new_version->row = NULL;
-//        _mm_free(new_version->data);
-
-
-            new_version->retire = nullptr;
-            new_version->retire_ID = 0;                //11-17
-
-            //TODO: Notice that begin_ts and end_ts of new_version both equal to MAX
-
-
-            _mm_free(new_version);
-            new_version = NULL;
-
-            accesses[rid]->orig_row->manager->blatch = false;
-             */
+            assert(new_version->begin_ts == UINT64_MAX && new_version->retire == this);
 
             /* BUG : Don't get the value of new_version.version_number at first. This value changes all the time, so we should get the value just before we use it or right after we acquire the blatch.
             uint64_t my_version_chain_number = (new_version->version_number & CHAIN_NUMBER);
             uint64_t my_version_deep_length = new_version->version_number & DEEP_LENGTH;
              */
 
-
-            //3-27 Make sure we get the latest and right version_header.
-//            int i = 0;
-//            while((row_header->version_number & CHAIN_NUMBER) < my_version_chain_number){
-//                row_header = accesses[rid]->orig_row->manager->get_version_header();
-//                printf("Index: %d, Strange!\n",i);
-//                i++;
-//            }
-
             row_header = accesses[rid]->orig_row->manager->get_version_header();
             uint64_t vh_chain = (row_header->version_number & CHAIN_NUMBER) >> 40;
             uint64_t my_chain = ((new_version->version_number & CHAIN_NUMBER) >> 40) + 1;
             // [No Latch]: Free directly.
             if(vh_chain > my_chain){
-
                 assert(row_header->version_number > new_version->version_number);
-
-                //3-27 DEBUG
-//                new_version->end_ts = 881;
 
                 new_version->retire = nullptr;
                 new_version->retire_ID = 0;
@@ -634,19 +555,11 @@ void txn_man::abort_process(txn_man * txn){
                 new_version->prev = NULL;
                 new_version->next = NULL;
 
-                //3-27 DEBUG
-//                new_version->version_number = row_header->version_number;
-
                 //TODO: can we just free this object without reset retire and retire_ID?
 
                 _mm_free(new_version);
                 new_version = NULL;
             }
-                /*
-                else if((row_header->version_number & CHAIN_NUMBER) < my_version_chain_number){
-                    [Possible]: This means that version_header hasn't been updated(we update old_), but verison_header and I are in the same chain.
-                }
-                */
             else{       // In the same chain.
                 while (!ATOM_CAS(accesses[rid]->orig_row->manager->blatch, false, true)){
                     PAUSE
@@ -666,9 +579,6 @@ void txn_man::abort_process(txn_man * txn){
 
                     accesses[rid]->orig_row->manager->blatch = false;
 
-                    //3-27 DEBUG
-//                    new_version->end_ts = 887;
-
                     new_version->retire = nullptr;
                     new_version->retire_ID = 0;
 
@@ -683,9 +593,6 @@ void txn_man::abort_process(txn_man * txn){
                     // [Need Latch]: We are in the same chain.
                 else{
                     // Get the old_version and depth of version_header and I.
-//                    row_header = accesses[rid]->orig_row->manager->get_version_header();
-//                    version_header_chain_number = row_header->version_number & CHAIN_NUMBER;
-//                    version_header_deep_length = row_header->version_number & DEEP_LENGTH;
                     old_version = new_version->next;
                     uint64_t vh_depth = (row_header->version_number & DEEP_LENGTH);
                     uint64_t my_depth = (new_version->version_number & DEEP_LENGTH);
@@ -710,7 +617,9 @@ void txn_man::abort_process(txn_man * txn){
                                 while(version_retrieve->begin_ts == UINT64_MAX){
                                     assert(version_retrieve->retire != NULL);
 
-                                    //3-27 DEBUG
+                                    version_retrieve->version_number += CHAIN_NUMBER_ADD_ONE;
+                                    version_retrieve = version_retrieve->next;
+
                                     /*
                                     version_retrieve->chain_num += 1;
                                     assert(version_retrieve->chain_num != 0);
@@ -718,38 +627,16 @@ void txn_man::abort_process(txn_man * txn){
                                         printf("Overflow!\n");
                                     }
                                     */
-
-                                    version_retrieve->version_number += CHAIN_NUMBER_ADD_ONE;
-
-                                    //3-27 DEBUG
-                                    //assert(version_retrieve->chain_num == ((version_retrieve->version_number & CHAIN_NUMBER) >> 40));
-
-                                    version_retrieve = version_retrieve->next;
                                 }
 
                                 // Update the chain-number of the first committed version.
                                 assert(version_retrieve->begin_ts != UINT64_MAX && version_retrieve->retire == NULL && version_retrieve->retire_ID == 0);
                                 version_retrieve->version_number += CHAIN_NUMBER_ADD_ONE;
-
-
-                                //3-27 DEBUG
-                                /*
-                                version_retrieve->chain_num += 1;
-                                assert(version_retrieve->chain_num != 0);
-                                assert(version_retrieve->chain_num == ((version_retrieve->version_number & CHAIN_NUMBER) >> 40));
-                                */
-
-                                //3-27 DEBUG
-//                                new_version->end_ts = 883;
                             } else {
                                 accesses[rid]->orig_row->manager->version_header = old_version;
+
                                 assert(accesses[rid]->orig_row->manager->version_header->end_ts == INF);
-
                                 assert(old_version->prev == new_version);
-
-                                // Don't link these two versions. Meaningless.
-//                                old_version->prev = NULL;
-//                                new_version->prev->next = NULL;
 
                                 // Should link these two versions.
                                 Version *pre_new = new_version->prev;
@@ -771,37 +658,13 @@ void txn_man::abort_process(txn_man * txn){
                                 while(version_retrieve->begin_ts == UINT64_MAX){
                                     assert(version_retrieve->retire != NULL);
 
-                                    //3-27 DEBUG
-                                    /*
-                                    version_retrieve->chain_num += 1;
-                                    assert(version_retrieve->chain_num != 0);
-                                    if((version_retrieve->version_number & CHAIN_NUMBER) == (pow(2,24)-1)){
-                                        printf("Overflow!\n");
-                                    }
-                                    */
-
                                     version_retrieve->version_number += CHAIN_NUMBER_ADD_ONE;
-
-                                    //3-27 DEBUG
-                                    //assert(version_retrieve->chain_num == ((version_retrieve->version_number & CHAIN_NUMBER) >> 40));
-
                                     version_retrieve = version_retrieve->next;
                                 }
 
                                 // Update the chain-number of the first committed version.
                                 assert(version_retrieve->begin_ts != UINT64_MAX && version_retrieve->retire == NULL && version_retrieve->retire_ID == 0);
                                 version_retrieve->version_number += CHAIN_NUMBER_ADD_ONE;
-
-
-                                //3-27 DEBUG
-                                /*
-                                version_retrieve->chain_num += 1;
-                                assert(version_retrieve->chain_num != 0);
-                                assert(version_retrieve->chain_num == ((version_retrieve->version_number & CHAIN_NUMBER) >> 40));
-                                */
-
-                                //3-27 DEBUG
-//                                new_version->end_ts = 884;
                             }
                         } else {
                             // Should link these two versions.
@@ -813,18 +676,9 @@ void txn_man::abort_process(txn_man * txn){
                                 // Possible: old_version is already pointing to new version.
                                 old_version->prev = pre_new;
                             }
-//                            assert(new_version->prev != NULL);
-//                            assert(new_version->next != NULL && old_version->prev ==  new_version);
-//
-//                            Version *pre_new = new_version->prev;
-//                            pre_new->next = old_version;
-//                            old_version->prev = pre_new;
 
                             new_version->prev = NULL;
                             new_version->next = NULL;
-
-                            //3-27 DEBUG
-//                            new_version->end_ts = 885;
                         }
 
 
@@ -846,8 +700,6 @@ void txn_man::abort_process(txn_man * txn){
                     }
                     else{
                         // Possible: May be I'm the version_header at first, but when I wait for blatch, someone changes the version_header to a new version.
-//                        assert(false);
-
                         assert(vh_chain == my_chain && vh_depth < my_depth);
 
                         accesses[rid]->orig_row->manager->blatch = false;
@@ -855,14 +707,8 @@ void txn_man::abort_process(txn_man * txn){
                         new_version->retire = nullptr;
                         new_version->retire_ID = 0;
 
-                        //3-27 DEBUG
-//                        Version* temp_new_version_prev = new_version->prev;
-
                         new_version->prev = NULL;
                         new_version->next = NULL;
-
-                        //3-27 DEBUG
-//                        new_version->end_ts = 888;
 
                         //TODO: can we just free this object without reset retire and retire_ID?
 

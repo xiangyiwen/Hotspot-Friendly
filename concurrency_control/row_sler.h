@@ -53,10 +53,6 @@ struct Version {
 
 #ifdef ABORT_OPTIMIZATION
     uint64_t version_number;           //3-27
-
-    //3-27 DEBUG
-//    uint64_t chain_num;
-//    uint64_t depth;
 #endif
 
 //    volatile bool 	version_latch;
