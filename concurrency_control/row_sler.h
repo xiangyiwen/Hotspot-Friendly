@@ -24,6 +24,22 @@ class txn_man;
 /**
  * Version Format in SLER
  */
+
+/* ERROR: 14 bit chain_number isn't enough, the value will overflow.
+// 14 bit chain_number + 50 bit deep_length
+#define CHAIN_NUMBER (((1ULL << 14)-1) << 50)
+#define DEEP_LENGTH ((1ULL << 50)-1)
+#define CHAIN_NUMBER_ADD_ONE (1ULL << 50)
+ */
+
+#ifdef ABORT_OPTIMIZATION
+// 24 bit chain_number + 40 bit deep_length
+#define CHAIN_NUMBER (((1ULL << 24)-1) << 40)
+#define DEEP_LENGTH ((1ULL << 40)-1)
+#define CHAIN_NUMBER_ADD_ONE (1ULL << 40)
+#endif
+
+
 struct Version {
     ts_t begin_ts;
     ts_t end_ts;
@@ -34,6 +50,14 @@ struct Version {
     uint64_t retire_ID;     //11-17
 
     row_t* data;
+
+#ifdef ABORT_OPTIMIZATION
+    uint64_t version_number;           //3-27
+
+    //3-27 DEBUG
+//    uint64_t chain_num;
+//    uint64_t depth;
+#endif
 
 //    volatile bool 	version_latch;
 

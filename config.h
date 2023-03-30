@@ -18,7 +18,7 @@
 #define WARMUP						1000
 
 // YCSB or TPCC
-#define WORKLOAD 					TPCC
+#define WORKLOAD 					YCSB
 // print the transaction latency distribution
 #define PRT_LAT_DISTR				false
 #define STATS_ENABLE				true
@@ -145,9 +145,9 @@
 // SYNTH_TABLE_SIZE: tuple count of the YCSB table
 //#define SYNTH_TABLE_SIZE 100
 #define SYNTH_TABLE_SIZE 			10000000
-#define ZIPF_THETA 					0.8
-#define READ_PERC 					0.9
-#define WRITE_PERC 					0.1
+#define ZIPF_THETA 					0
+#define READ_PERC 					1
+#define WRITE_PERC 					0
 #define SCAN_PERC 					0
 #define SCAN_LEN					20
 #define PART_PER_TXN 				1
@@ -157,15 +157,15 @@
 
 //REQ_PER_QUERY: request count of a txn (short/normal transaction in YCSB)
 #define REQ_PER_QUERY				16
-#define LONG_TXN_RATIO              0.01
+#define LONG_TXN_RATIO              0
 #define LONG_TXN_READ_RATIO			1
 #define FIELD_PER_TUPLE				10
 // ==== [YCSB-synthetic] ====
-#define SYNTHETIC_YCSB              false
-#define POS_HS                      TOP
-#define SPECIFIED_RATIO             0
+#define SYNTHETIC_YCSB              true
+#define POS_HS                      SPECIFIED
+#define SPECIFIED_RATIO             0.1
 #define FLIP_RATIO                  0
-#define NUM_HS                      1
+#define NUM_HS                      2
 #define FIRST_HS                    WR
 #define SECOND_HS                   WR
 #define FIXED_HS                    0
@@ -182,7 +182,7 @@
 #define TPCC_ACCESS_ALL 			false
 #define WH_UPDATE					true
 // NUM_WH: define the warehouse count
-#define NUM_WH 						1
+#define NUM_WH 						2
 //
 enum TPCCTxnType {
   TPCC_PAYMENT,
@@ -302,5 +302,11 @@ extern TestCases					g_test_case;
 #define SPECIFIED                   6
 
 #define TEST_NUM                    1
+#define TEST_INDEX                  5
+
+#define ABORT_OPTIMIZATION          false
+
+#define PROJECTED_ELEMENT_COUNT     5
+#define FALSE_POSITIVE_PROBABILITY  0.05
 
 #endif

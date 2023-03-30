@@ -48,6 +48,17 @@ void Row_sler::init(row_t *row){
     version_header->retire_ID = 0;          //11-17
 //    version_header->version_latch = false;
 
+#ifdef ABORT_OPTIMIZATION
+    //3-27
+    version_header->version_number = 0;
+
+    //3-27 DEBUG
+    /*
+    version_header->chain_num = 0;
+    version_header->depth = 0;
+     */
+#endif
+
     blatch = false;
 }
 
@@ -163,7 +174,7 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
             PAUSE
         }
 
-        while (version_header ) {
+        while (version_header) {
             assert(version_header->end_ts == INF);
 
             retire_txn = version_header->retire;
@@ -200,6 +211,46 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                     */
 
                     version_header = version_header->next;         //11-22
+
+#ifdef ABORT_OPTIMIZATION
+                    //3-27 Solution-1:Recursively update the chain_number of uncommitted old version and the first committed verison.
+                    Version* version_retrieve = version_header;
+
+                    while(version_retrieve->begin_ts == UINT64_MAX){
+                        assert(version_retrieve->retire != NULL);
+
+//                            3-27 DEBUG
+                        /*
+                        version_retrieve->chain_num += 1;
+                        assert(version_retrieve->chain_num != 0);
+                        if((version_retrieve->version_number & CHAIN_NUMBER) == (pow(2,24)-1)){
+                            printf("Overflow!\n");
+                        }
+                        */
+
+                        version_retrieve->version_number += CHAIN_NUMBER_ADD_ONE;
+
+                        //3-27 DEBUG
+                        //assert(version_retrieve->chain_num == ((version_retrieve->version_number & CHAIN_NUMBER) >> 40));
+
+                        version_retrieve = version_retrieve->next;
+                    }
+
+                    // Update the chain-number of the first committed version.
+                    assert(version_retrieve->begin_ts != UINT64_MAX && version_retrieve->retire == NULL && version_retrieve->retire_ID == 0);
+                    version_retrieve->version_number += CHAIN_NUMBER_ADD_ONE;
+
+
+                    //3-27 DEBUG
+                    /*
+                    version_retrieve->chain_num += 1;
+                    assert(version_retrieve->chain_num != 0);
+                    assert(version_retrieve->chain_num == ((version_retrieve->version_number & CHAIN_NUMBER) >> 40));
+                    */
+
+//                        version_header = version_header->next;
+//                        version_header->prev = NULL;        //3-27 Will this causes error?[YES]
+#endif
 
                     assert(version_header->end_ts == INF && retire_txn->status == ABORTED);
                     continue;
@@ -331,6 +382,47 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                     } else if (temp_status == ABORTED) {
 
                         version_header = version_header->next;
+
+#ifdef ABORT_OPTIMIZATION
+                        //3-27 Solution-1:Recursively update the chain_number of uncommitted old version and the first committed verison.
+                        Version* version_retrieve = version_header;
+
+                        while(version_retrieve->begin_ts == UINT64_MAX){
+                            assert(version_retrieve->retire != NULL);
+
+//                            3-27 DEBUG
+                            /*
+                            version_retrieve->chain_num += 1;
+                            assert(version_retrieve->chain_num != 0);
+                            if((version_retrieve->version_number & CHAIN_NUMBER) == (pow(2,24)-1)){
+                                printf("Overflow!\n");
+                            }
+                            */
+
+                            version_retrieve->version_number += CHAIN_NUMBER_ADD_ONE;
+
+                            //3-27 DEBUG
+                            //assert(version_retrieve->chain_num == ((version_retrieve->version_number & CHAIN_NUMBER) >> 40));
+
+                            version_retrieve = version_retrieve->next;
+                        }
+
+                        // Update the chain-number of the first committed version.
+                        assert(version_retrieve->begin_ts != UINT64_MAX && version_retrieve->retire == NULL && version_retrieve->retire_ID == 0);
+                        version_retrieve->version_number += CHAIN_NUMBER_ADD_ONE;
+
+
+                        //3-27 DEBUG
+                        /*
+                        version_retrieve->chain_num += 1;
+                        assert(version_retrieve->chain_num != 0);
+                        assert(version_retrieve->chain_num == ((version_retrieve->version_number & CHAIN_NUMBER) >> 40));
+                        */
+
+//                        version_header = version_header->next;
+//                        version_header->prev = NULL;        //3-27 Will this causes error?[YES]
+#endif
+
                         assert(version_header->end_ts == INF && retire_txn->status == ABORTED);
                         continue;
                     }
@@ -410,6 +502,47 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                         */
 
                         version_header = version_header->next;
+
+#ifdef ABORT_OPTIMIZATION
+                        //3-27 Solution-1:Recursively update the chain_number of uncommitted old version and the first committed verison.
+                        Version* version_retrieve = version_header;
+
+                        while(version_retrieve->begin_ts == UINT64_MAX){
+                            assert(version_retrieve->retire != NULL);
+
+//                            3-27 DEBUG
+                            /*
+                            version_retrieve->chain_num += 1;
+                            assert(version_retrieve->chain_num != 0);
+                            if((version_retrieve->version_number & CHAIN_NUMBER) == (pow(2,24)-1)){
+                                printf("Overflow!\n");
+                            }
+                            */
+
+                            version_retrieve->version_number += CHAIN_NUMBER_ADD_ONE;
+
+                            //3-27 DEBUG
+                            //assert(version_retrieve->chain_num == ((version_retrieve->version_number & CHAIN_NUMBER) >> 40));
+
+                            version_retrieve = version_retrieve->next;
+                        }
+
+                        // Update the chain-number of the first committed version.
+                        assert(version_retrieve->begin_ts != UINT64_MAX && version_retrieve->retire == NULL && version_retrieve->retire_ID == 0);
+                        version_retrieve->version_number += CHAIN_NUMBER_ADD_ONE;
+
+
+                        //3-27 DEBUG
+                        /*
+                        version_retrieve->chain_num += 1;
+                        assert(version_retrieve->chain_num != 0);
+                        assert(version_retrieve->chain_num == ((version_retrieve->version_number & CHAIN_NUMBER) >> 40));
+                        */
+
+//                        version_header = version_header->next;
+//                        version_header->prev = NULL;        //3-27 Will this causes error?[YES]
+#endif
+
                         assert(version_header->end_ts == INF && retire_txn->status == ABORTED);
                         continue;
                     }
@@ -544,6 +677,47 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
 
                         } else if (temp_status == ABORTED) {
                             version_header = version_header->next;
+
+#ifdef ABORT_OPTIMIZATION
+                            //3-27 Solution-1:Recursively update the chain_number of uncommitted old version and the first committed verison.
+                            Version* version_retrieve = version_header;
+
+                            while(version_retrieve->begin_ts == UINT64_MAX){
+                                assert(version_retrieve->retire != NULL);
+
+//                            3-27 DEBUG
+                                /*
+                                version_retrieve->chain_num += 1;
+                                assert(version_retrieve->chain_num != 0);
+                                if((version_retrieve->version_number & CHAIN_NUMBER) == (pow(2,24)-1)){
+                                    printf("Overflow!\n");
+                                }
+                                */
+
+                                version_retrieve->version_number += CHAIN_NUMBER_ADD_ONE;
+
+                                //3-27 DEBUG
+                                //assert(version_retrieve->chain_num == ((version_retrieve->version_number & CHAIN_NUMBER) >> 40));
+
+                                version_retrieve = version_retrieve->next;
+                            }
+
+                            // Update the chain-number of the first committed version.
+                            assert(version_retrieve->begin_ts != UINT64_MAX && version_retrieve->retire == NULL && version_retrieve->retire_ID == 0);
+                            version_retrieve->version_number += CHAIN_NUMBER_ADD_ONE;
+
+
+                            //3-27 DEBUG
+                            /*
+                            version_retrieve->chain_num += 1;
+                            assert(version_retrieve->chain_num != 0);
+                            assert(version_retrieve->chain_num == ((version_retrieve->version_number & CHAIN_NUMBER) >> 40));
+                            */
+
+//                        version_header = version_header->next;
+//                        version_header->prev = NULL;        //3-27 Will this causes error?[YES]
+#endif
+
                             assert(version_header->end_ts == INF && retire_txn->status == ABORTED);
                             continue;
                         }
@@ -582,6 +756,25 @@ void Row_sler::createNewVersion(txn_man * txn, Access * access){
     new_version->retire = txn;
 
     new_version->retire_ID = txn->get_sler_txn_id();        //11-17
+
+#ifdef ABORT_OPTIMIZATION
+    //3-27 DEBUG
+    /*
+    if((new_version->version_number & DEEP_LENGTH) == (pow(2,40)-1)){
+        printf("Overflow!\n");
+    }
+    */
+
+    //3-27 Solution-1
+    new_version->version_number = version_header->version_number + 1;
+
+    //3-27 DEBUG
+    /*
+    new_version->chain_num = version_header->chain_num;
+    assert(new_version->chain_num != 0 || new_version->chain_num == ((new_version->version_number & CHAIN_NUMBER) >> 40));
+    new_version->depth = version_header->depth + 1;
+     */
+#endif
 
     new_version->next = version_header;
 //    new_version->row->copy(version_header->row);
