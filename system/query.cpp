@@ -80,7 +80,10 @@ void Query_thd::init(workload * h_wl, int thread_id) {
     #if WORKLOAD == YCSB
         queries = (ycsb_query *)
             mem_allocator.alloc(sizeof(ycsb_query) * request_cnt, thread_id);
+
+        // Set the random seed of drand48_r(). The random seed of every thread is different. But the random seed may be the same of different txns created and executed by the same thread.
         srand48_r(thread_id + 1, &buffer);
+
         // XXX(zhihan): create a pre-allocated space for long txn
         if (g_long_txn_ratio > 0) {
             long_txn = (ycsb_request *)
