@@ -148,7 +148,9 @@ RC thread_t::run() {
                 }
 
                 m_txn->sler_txn_id = (get_thd_id() << 32) | (get_sys_clock() & 0xffffffff);
+        #if DEADLOCK_DETECTION
                 m_txn->InsertWaitingSet(m_txn->get_sler_txn_id());               // Initialize waiting set
+        #endif
 
                 // 2-16 DEBUG
 //                while(!ATOM_CAS(m_txn->status_latch, false, true))

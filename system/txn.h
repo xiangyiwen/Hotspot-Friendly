@@ -179,13 +179,18 @@ class txn_man
     bool                read_only;
 #endif
 
+//    //4-3 Restrict the length of version chain.
+//    uint64_t            priority;           // Only the transaction itself can update the priority, so we can simply declare it a uint64_t.
+
     //12-6 DEBUG
 //    int                 uncommitted_cnt;
 //    atomic<int>                 dependency_cnt;
 //    vector<dep_element> dep_debug;
 
     Dependency          sler_dependency;
+#if DEADLOCK_DETECTION
     bloom_filter        sler_waiting_set;           // Deadlock Detection
+#endif
 
     // 12- 6 DEBUG
 //    vector<dep_element> wait_list;
@@ -370,6 +375,7 @@ class txn_man
     inline uint64_t 	get_sler_txn_id(){return this->sler_txn_id;}
 
     /* Helper Function for dependency*/
+    /*
 //    bool_dep PushDependency(txn_man *dep_txn, uint64_t txn_id,DepType depType) {
 //        if(sler_dependency.find(dep_txn) != sler_dependency.end()){
 //            DepType current_type = sler_dependency[dep_txn].dep_type;
@@ -388,6 +394,7 @@ class txn_man
 //            return NOT_CONTAIN;
 //        }
 //    }
+     */
 
     void PushDependency(txn_man *dep_txn, uint64_t dep_txn_id,DepType depType) {
         //12-6
@@ -397,6 +404,7 @@ class txn_man
         sler_dependency.push_back(temp_element);
     }
 
+    /*
 //    void PushDependency(DepType depType, txn_man * insert_txn , uint64_t insert_txn_id) {
 //        dep_element temp_element = {insert_txn,insert_txn_id,depType};
 ////        sler_dependency.push_back(temp_element);
@@ -409,7 +417,9 @@ class txn_man
 //        dep_element temp_element = {wait_txn,wait_txn_id,waitType};
 //        wait_list.push_back(temp_element);
 //    }
+     */
 
+#if DEADLOCK_DETECTION
     /* Helper Functions for waiting_set */
     // Record a txn in waiting_set
     void InsertWaitingSet(uint64_t txn_id) {
@@ -444,6 +454,7 @@ class txn_man
             }
         }
     }
+#endif
 
     void SemaphoreAddOne() {
         //12-6
@@ -469,6 +480,11 @@ class txn_man
         }
 
     }
+
+    //4-3 Restrict the length of version chain.
+//    void PriorityAddOne() {
+//        priority++;
+//    }
 #endif
 
   protected:

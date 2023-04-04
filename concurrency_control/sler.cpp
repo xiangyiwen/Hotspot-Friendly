@@ -86,6 +86,7 @@ RC txn_man::validate_sler(RC rc) {
 //        uint64_t span = get_sys_clock() - starttime;
 //        if(span > 10000){
 
+#if DEADLOCK_DETECTION
         //12-6 [Check Deadlock again]: Make sure the workload can finish.
         for(auto & dep_pair : sler_dependency) {
             if(status == ABORTED){
@@ -149,11 +150,13 @@ RC txn_man::validate_sler(RC rc) {
         }
 
         //        }
+#endif
 
-
+#if SLER_TIMEOUT
 //         [Timeout]: Make sure the workload can finish.[1 ms(a transaction's average execution time is 0.16ms)]
         uint64_t span = get_sys_clock() - starttime;
-        if(span > 0.5*1000000UL){
+//        if(span > 0.5*1000000UL){
+        if(span > 0.04*1000000UL){
 
 //            printf("txn_id: %lu, semaphore: %ld, status: %d, validate_time: %lu\n", sler_txn_id,sler_semaphore,status,span);
 //            printf("semaphore: %ld;\n",sler_semaphore);
@@ -164,6 +167,7 @@ RC txn_man::validate_sler(RC rc) {
             abort_process(this);
             return Abort;
         }
+#endif
     }
 
 
@@ -242,6 +246,7 @@ RC txn_man::validate_sler(RC rc) {
             while(current_version->begin_ts == UINT64_MAX){
                 cout << sler_txn_id << " You should wait!  " << endl;
 
+#if DEADLOCK_DETECTION
                 // 12-12 [DEADLOCK FIX]: Since we may subtract the semaphore of a txn too aggressively, the txn may be validated too early. So we have to do one more deadlock check here.
                 for(auto & dep_pair : sler_dependency) {
                     if(!dep_pair.dep_type){               // we may get an element before it being initialized(empty data / wrong data)
@@ -298,6 +303,7 @@ RC txn_man::validate_sler(RC rc) {
                         return Abort;
                     }
                 }
+#endif
             }
 
             serial_id = current_version->begin_ts + 1;

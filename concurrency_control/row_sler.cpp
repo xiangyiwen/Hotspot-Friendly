@@ -189,6 +189,7 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                 assert(retire_txn != txn);
                 assert(version_header->retire_ID == retire_txn->sler_txn_id);          //11-18
 
+#if DEADLOCK_DETECTION
                 // [DeadLock]
                 // 2-28 Reduce percentage of wrong killing in single hotspot scene.
 //                if (retire_txn->WaitingSetContains(txn_id)
@@ -244,6 +245,7 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                 }
                 // [No Deadlock]
                 else {
+#endif
 
                     status_t temp_status = retire_txn->status;
 
@@ -272,8 +274,10 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                         // 2-26 : Avoid unnecessary data update.
                         if(temp_status == RUNNING) {
 
+#if DEADLOCK_DETECTION
                             // Update waiting set
                             txn->UnionWaitingSet(retire_txn->sler_waiting_set);
+#endif
 
                             if(txn->status == ABORTED){
                                 rc = Abort;
@@ -389,7 +393,9 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                         assert(version_header->end_ts == INF && retire_txn->status == ABORTED);
                         continue;
                     }
+#if DEADLOCK_DETECTION
                 }
+#endif
             }
         }
 
@@ -450,11 +456,15 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                     assert(retire_txn != txn);
                     assert(version_header->retire_ID == retire_txn->sler_txn_id);          //11-18
 
+#if DEADLOCK_DETECTION
+
                     // [DeadLock]
 // 2-28 Reduce percentage of wrong killing in single hotspot scene.
 //                if (retire_txn->WaitingSetContains(txn_id)
 //                    && (txn->sler_semaphore != 0 || !txn->sler_dependency.empty())
 //                    && retire_txn->set_abort() == RUNNING) {
+
+
                     if (retire_txn->WaitingSetContains(txn_id) && retire_txn->set_abort() == RUNNING) {
 
                         // 12-5 DEBUG
@@ -487,6 +497,7 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                     }
                     // [No Deadlock]
                     else {
+#endif
 
                         status_t temp_status = retire_txn->status;
 
@@ -525,8 +536,11 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                             // 2-26 : Avoid unnecessary data update.
                             if(temp_status == RUNNING) {
 
+#if DEADLOCK_DETECTION
+
                                 // Update waiting set
                                 txn->UnionWaitingSet(retire_txn->sler_waiting_set);
+#endif
 
                                 if(txn->status == ABORTED){
                                     rc = Abort;
@@ -636,7 +650,9 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
                             assert(version_header->end_ts == INF && retire_txn->status == ABORTED);
                             continue;
                         }
+#if DEADLOCK_DETECTION
                     }
+#endif
                 }
             }
         }

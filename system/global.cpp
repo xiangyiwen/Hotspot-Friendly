@@ -98,10 +98,27 @@ string test_num = "3";
 string test_num = "4";
 #endif
 
+#if TEST_INDEX == 1
+string test_index = "1";
+#elif TEST_INDEX == 2
+string test_index = "2";
+#elif TEST_INDEX == 3
+string test_index = "3";
+#elif TEST_INDEX == 4
+string test_index = "4";
+#elif TEST_INDEX == 5
+string test_index = "5";
+#endif
+
 //string temp ="/home/xyw/SLER/Bamboo-Public-dbx1000-bamboo/results_background/test_"+ test_num + "_" + cc_name +".txt";
 //string temp ="/home/xyw/SLER/Bamboo-Public-dbx1000-bamboo/results_synthetic_ycsb/test_"+ test_num + "_" + cc_name +".txt";
 //string temp ="/home/xyw/SLER/Bamboo-Public-dbx1000-bamboo/results_YCSB/test_"+ test_num + "_" + cc_name +".txt";
-string temp ="/home/xyw/SLER/Bamboo-Public-dbx1000-bamboo/results_TPCC/test_"+ test_num + "_" + cc_name +".txt";
+//string temp ="/home/xyw/SLER/Bamboo-Public-dbx1000-bamboo/results_TPCC/test_"+ test_num + "_" + cc_name +".txt";
+
+//string temp ="/home/xyw/SLER/Bamboo-Public-dbx1000-bamboo/results_YCSB/test_" + test_index + "/" + "test_"+ test_num + "_" + cc_name + ".txt";
+string temp ="/home/xyw/SLER/Bamboo-Public-dbx1000-bamboo/results_synthetic_ycsb/test_" + test_index + "/" + "test_"+ test_num + "_" + cc_name + ".txt";
+//string temp ="/home/xyw/SLER/Bamboo-Public-dbx1000-bamboo/results_TPCC/test_" + test_index + "/" + "test_"+ test_num + "_" + cc_name + ".txt";
+//
 
 char * output_file = const_cast<char *>(temp.c_str());
 

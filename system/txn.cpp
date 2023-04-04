@@ -56,6 +56,7 @@ void txn_man::init(thread_t * h_thd, workload * h_wl, uint64_t thd_id) {
     //12-12
 //    sler_dependency = new tbb::concurrent_vector<dep_element>();
 
+#if DEADLOCK_DETECTION
     bloom_parameters parameters;
     parameters.projected_element_count = 5;
     parameters.false_positive_probability = 0.05;
@@ -71,12 +72,16 @@ void txn_man::init(thread_t * h_thd, workload * h_wl, uint64_t thd_id) {
 
     bloom_filter temp_bloom(parameters);
     sler_waiting_set = temp_bloom;
+#endif
 
     // 2-27 Optimization for read_only long transaction.
 #if READ_ONLY_OPTIMIZATION_ENABLE
     is_long = false;
     read_only = false;
 #endif
+
+//    4-3 Restrict the length of version chain.
+//    priority = 0;
 
 #endif
 
@@ -188,7 +193,9 @@ void txn_man::cleanup(RC rc) {
     sler_dependency.clear();
 //    sler_dependency.shrink_to_fit();          // may cause retrieving an uninitialized element(eg. Read_Write),shouldn't call it
 
+#if DEADLOCK_DETECTION
     sler_waiting_set.clear();
+#endif
 
     row_cnt = 0;
     wr_cnt = 0;
@@ -200,6 +207,9 @@ void txn_man::cleanup(RC rc) {
     is_long = false;
     read_only = false;
 #endif
+
+//    //4-3 Restrict the length of version chain.
+//    priority = 0;
 
     //12-13 for READ_WRITE test can pass the assertion
 #if WORKLOAD == TEST
