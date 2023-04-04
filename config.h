@@ -5,7 +5,7 @@
 // Simulation + Hardware
 /***********************************************/
 #define TERMINATE_BY_COUNT true
-#define THREAD_CNT					20
+#define THREAD_CNT					30
 #define PART_CNT					1
 // each transaction only accesses 1 virtual partition. But the lock/ts manager and index are not aware of such partitioning. VIRTUAL_PART_CNT describes the request distribution and is only used to generate queries. For HSTORE, VIRTUAL_PART_CNT should be the same as PART_CNT.
 #define VIRTUAL_PART_CNT			1
@@ -157,12 +157,12 @@
 
 //REQ_PER_QUERY: request count of a txn (short/normal transaction in YCSB)
 #define REQ_PER_QUERY				16
-#define LONG_TXN_RATIO              0
+#define LONG_TXN_RATIO              0.1
 #define LONG_TXN_READ_RATIO			1
 #define FIELD_PER_TUPLE				10
 // ==== [YCSB-synthetic] ====
 #define SYNTHETIC_YCSB              true
-#define POS_HS                      SPECIFIED
+#define POS_HS                      RANDOM
 #define SPECIFIED_RATIO             1
 #define FLIP_RATIO                  0
 #define NUM_HS                      1
@@ -182,7 +182,7 @@
 #define TPCC_ACCESS_ALL 			false
 #define WH_UPDATE					true
 // NUM_WH: define the warehouse count
-#define NUM_WH 						2
+#define NUM_WH 						1
 //
 enum TPCCTxnType {
   TPCC_PAYMENT,
@@ -301,13 +301,14 @@ extern TestCases					g_test_case;
 #define MB                          5
 #define SPECIFIED                   6
 
-#define TEST_NUM                    3
-#define TEST_INDEX                  5
+#define TEST_NUM                    1
+#define TEST_INDEX                  2
 
 #define ABORT_OPTIMIZATION          false
 
 #define DEADLOCK_DETECTION          false
-#define SLER_TIMEOUT                false
+#define SLER_TIMEOUT                true
+#define ABORT_WAIT_TIME             0.5
 
 #define PROJECTED_ELEMENT_COUNT     5
 #define FALSE_POSITIVE_PROBABILITY  0.05
