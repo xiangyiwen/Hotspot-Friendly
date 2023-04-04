@@ -156,7 +156,7 @@ RC txn_man::validate_sler(RC rc) {
 //         [Timeout]: Make sure the workload can finish.[1 ms(a transaction's average execution time is 0.16ms)]
         uint64_t span = get_sys_clock() - starttime;
 //        if(span > 0.5*1000000UL){
-        if(span > 0.04*1000000UL){
+        if(span > ABORT_WAIT_TIME*1000000UL){
 
 //            printf("txn_id: %lu, semaphore: %ld, status: %d, validate_time: %lu\n", sler_txn_id,sler_semaphore,status,span);
 //            printf("semaphore: %ld;\n",sler_semaphore);
