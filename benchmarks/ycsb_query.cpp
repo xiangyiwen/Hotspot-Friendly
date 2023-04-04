@@ -162,6 +162,13 @@ uint64_t table_size = g_synth_table_size / g_virtual_part_cnt;              // g
     // Initialize local_req_per_query requests of a query/txn.
 	uint64_t rid = 0;
 	uint64_t tmp;
+
+    // Calculate the random place of hotspot operation in a transaction.
+    double temp_hotspot_position;
+    int hotspot_position;
+    drand48_r(&_query_thd->buffer, &temp_hotspot_position);
+    hotspot_position = temp_hotspot_position*local_req_per_query;
+
 	for (tmp = 0; tmp < local_req_per_query; tmp ++) {		
 	    assert(tmp == rid);
 		ycsb_request * req = &requests[rid];
@@ -174,7 +181,27 @@ uint64_t table_size = g_synth_table_size / g_virtual_part_cnt;              // g
         #if SYNTHETIC_YCSB
             assert(part_id == 0);
             #if NUM_HS == 1         // [Single Hotspot]
-              #if POS_HS == TOP
+              #if POS_HS == RANDOM
+                if (tmp == hotspot_position) {
+                    // insert hotpost at the beginning
+//                    req->rtype = FIRST_HS;
+                    row_id = table_size - 1;
+
+                    // 2-28 Support variable operation type for hotspot
+                    double temp_r;
+                    drand48_r(&_query_thd->buffer, &temp_r);
+                    if(temp_r < READ_HOTSPOT_RATIO){
+                        req->rtype = RD;
+                    } else{
+                        req->rtype = WR;
+                    }
+
+                    // 2-26: Support read_only long transaction in synthetic YCSB. Reset its request type.
+                    if(is_long && g_long_txn_read_ratio == 1){
+                        req->rtype = RD;
+                    }
+                } else {
+              #elif POS_HS == TOP
                 if (tmp == 0) {
                     // insert hotpost at the beginning
 //                    req->rtype = FIRST_HS;
