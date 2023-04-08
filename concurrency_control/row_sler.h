@@ -78,6 +78,20 @@ public:
     volatile bool 	blatch;
     Version *       version_header;          // version header of a row's version chain (N2O)
 
+#if VERSION_CHAIN_CONTROL
+    //4-3 Restrict the length of version chain.
+//    uint64_t uncommitted_version_count;
+    uint64_t threshold;
+
+    void IncreaseThreshold(){
+        ATOM_ADD(threshold,1);
+    }
+
+    void DecreaseThreshold(){
+        ATOM_SUB(threshold,1);
+    }
+#endif
+
 
 private:
     void 		createNewVersion(txn_man * txn, Access * access);

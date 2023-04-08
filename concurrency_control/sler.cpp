@@ -79,12 +79,6 @@ RC txn_man::validate_sler(RC rc) {
             }
         }*/
 
-//        int dp_size = dependency_cnt;
-//        int debug_i =0 ;
-
-        // 2-28 Reduce percentage of wrong killing in single hotspot scene..
-//        uint64_t span = get_sys_clock() - starttime;
-//        if(span > 10000){
 
 #if DEADLOCK_DETECTION
         //12-6 [Check Deadlock again]: Make sure the workload can finish.
@@ -148,8 +142,6 @@ RC txn_man::validate_sler(RC rc) {
                 return Abort;
             }
         }
-
-        //        }
 #endif
 
 #if SLER_TIMEOUT
@@ -459,6 +451,12 @@ RC txn_man::validate_sler(RC rc) {
          new_version->retire = nullptr;
          new_version->retire_ID = 0;                //11-17
 
+#if VERSION_CHAIN_CONTROL
+         //4-3 Restrict the length of version chain. [Subtract the count of uncommitted versions.]
+//         ATOM_SUB(accesses[write_set[rid]]->orig_row->manager->uncommitted_version_count,1);
+         accesses[write_set[rid]]->orig_row->manager->DecreaseThreshold();
+#endif
+
          accesses[write_set[rid]]->orig_row->manager->blatch = false;
      }
 
@@ -535,6 +533,12 @@ void txn_man::abort_process(txn_man * txn){
             if(accesses[rid]->type == RD){
                 continue;
             }
+
+#if VERSION_CHAIN_CONTROL
+            //4-3 Restrict the length of version chain. [Subtract the count of uncommitted versions.]
+//            ATOM_SUB(accesses[rid]->orig_row->manager->uncommitted_version_count,1);
+            accesses[rid]->orig_row->manager->DecreaseThreshold();
+#endif
 
             // We record new version in read_write_set.
             Version* new_version = (Version*)accesses[rid]->tuple_version;

@@ -80,8 +80,10 @@ void txn_man::init(thread_t * h_thd, workload * h_wl, uint64_t thd_id) {
     read_only = false;
 #endif
 
+#if VERSION_CHAIN_CONTROL
 //    4-3 Restrict the length of version chain.
-//    priority = 0;
+    priority = 0;
+#endif
 
 #endif
 
@@ -208,8 +210,10 @@ void txn_man::cleanup(RC rc) {
     read_only = false;
 #endif
 
-//    //4-3 Restrict the length of version chain.
-//    priority = 0;
+#if VERSION_CHAIN_CONTROL
+    //4-3 Restrict the length of version chain.
+    priority = 0;
+#endif
 
     //12-13 for READ_WRITE test can pass the assertion
 #if WORKLOAD == TEST

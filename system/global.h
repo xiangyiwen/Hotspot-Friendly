@@ -208,6 +208,10 @@ struct write_set_element {
 typedef tbb::concurrent_unordered_map<uint64_t, write_set_element>  WriteSet_Mix;
 */
 
+//4-3 Restrict the length of version chain.[Unused]
+//extern uint64_t version_chain_threshold;
+
+
 #define MSG(str, args...) { \
 	printf("[%s : %d] " str, __FILE__, __LINE__, args); } \
 //	printf(args); }

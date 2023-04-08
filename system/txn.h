@@ -179,8 +179,10 @@ class txn_man
     bool                read_only;
 #endif
 
-//    //4-3 Restrict the length of version chain.
-//    uint64_t            priority;           // Only the transaction itself can update the priority, so we can simply declare it a uint64_t.
+#if VERSION_CHAIN_CONTROL
+    //4-3 Restrict the length of version chain.
+    double            priority;           // Only the transaction itself can update the priority, so we can simply declare it a uint64_t.
+#endif
 
     //12-6 DEBUG
 //    int                 uncommitted_cnt;
@@ -481,10 +483,12 @@ class txn_man
 
     }
 
-    //4-3 Restrict the length of version chain.
-//    void PriorityAddOne() {
-//        priority++;
-//    }
+#if VERSION_CHAIN_CONTROL
+//    4-3 Restrict the length of version chain.
+    void PriorityAddOne() {
+        priority += 1;
+    }
+#endif
 #endif
 
   protected:

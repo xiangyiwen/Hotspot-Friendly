@@ -53,8 +53,15 @@ void Row_sler::init(row_t *row){
     version_header->version_number = 0;
 #endif
 
+#if VERSION_CHAIN_CONTROL
+    //4-3 Restrict the length of version chain.
+//    uncommitted_version_count = 0;
+    threshold = 0;
+#endif
+
     blatch = false;
 }
+
 
 /**
  * Read/Write a row according to the type.
@@ -163,10 +170,28 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
             #endif
         #endif
 
+#if VERSION_CHAIN_CONTROL
+        //4-3 Restrict the length of version chain. [Judge the priority of txn and threshold of tuple first.]
+        uint64_t starttime_read = get_sys_clock();
+//        double timeout_span = ((double)THREAD_CNT/180-(double)4/180)*1000000UL;
+        double timeout_span = (THREAD_CNT >= 18)? 0.1*1000000UL : 0;
+        while (txn->priority < (double)threshold && (double)(get_sys_clock() - starttime_read) < 0.1*1000000UL){
+            PAUSE
+        }
+#endif
 
         while(!ATOM_CAS(blatch, false, true)){
             PAUSE
         }
+
+        //4-3 Restrict the length of version chain. [Judge the count of uncommitted versions first.]
+//        if (uncommitted_version_count >18 && txn->row_cnt == 0){
+//            blatch = false;
+//            usleep(62);
+//            while(!ATOM_CAS(blatch, false, true)){
+//                PAUSE
+//            }
+//        }
 
         while (version_header) {
             assert(version_header->end_ts == INF);
@@ -408,9 +433,28 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
         blatch = false;
     }
     else if (type == P_REQ) {
+#if VERSION_CHAIN_CONTROL
+        //4-3 Restrict the length of version chain. [Judge the priority of txn and threshold of tuple first.]
+        uint64_t starttime_write = get_sys_clock();
+//        double timeout_span = ((double)THREAD_CNT/180-(double)4/180)*1000000UL;
+        double timeout_span = (THREAD_CNT >= 18)? 0.1*1000000UL : 0;
+        while (txn->priority < (double)threshold && (double)(get_sys_clock() - starttime_write) < 0.1*1000000UL){
+            PAUSE
+        }
+#endif
+
         while(!ATOM_CAS(blatch, false, true)){
             PAUSE
         }
+
+        //4-3 Restrict the length of version chain. [Judge the count of uncommitted versions first.]
+//        if (uncommitted_version_count >18 && txn->row_cnt == 0){
+//            blatch = false;
+//            usleep(62);
+//            while(!ATOM_CAS(blatch, false, true)){
+//                PAUSE
+//            }
+//        }
 
         /*
          * [DELETED ASSERTION]
@@ -697,6 +741,13 @@ void Row_sler::createNewVersion(txn_man * txn, Access * access){
 
     //3-27 Solution-1
     new_version->version_number = version_header->version_number + 1;
+#endif
+
+#if VERSION_CHAIN_CONTROL
+    //4-3 Restrict the length of version chain. [Update the count of uncommitted versions.]
+//    ATOM_ADD(uncommitted_version_count,1);
+    IncreaseThreshold();
+    txn->PriorityAddOne();
 #endif
 
     new_version->next = version_header;

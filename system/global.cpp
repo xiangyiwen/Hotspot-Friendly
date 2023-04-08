@@ -66,8 +66,11 @@ double g_perc_orderstatus = PERC_ORDERSTATUS;
 double g_perc_stocklevel = PERC_STOCKLEVEL;
 double g_perc_neworder = 1 - (g_perc_payment + g_perc_delivery + g_perc_orderstatus + g_perc_stocklevel);
 bool g_wh_update = WH_UPDATE;
-//char * output_file = NULL;
 
+//4-3 Restrict the length of version chain.[Unused]
+//uint64_t version_chain_threshold = MAX_CHAIN_LENGTH;
+
+//char * output_file = NULL;
 
 #if CC_ALG == WOUND_WAIT
 string cc_name = "WOUND_WAIT";
@@ -86,7 +89,6 @@ string cc_name = "HEKATON";
 #elif CC_ALG == SLER
 string cc_name = "SLER";
 #endif
-
 
 #if TEST_NUM == 1
 string test_num = "1";
@@ -115,8 +117,8 @@ string test_index = "5";
 //string temp ="/home/xyw/SLER/Bamboo-Public-dbx1000-bamboo/results_YCSB/test_"+ test_num + "_" + cc_name +".txt";
 //string temp ="/home/xyw/SLER/Bamboo-Public-dbx1000-bamboo/results_TPCC/test_"+ test_num + "_" + cc_name +".txt";
 
-//string temp ="/home/xyw/SLER/Bamboo-Public-dbx1000-bamboo/results_YCSB/test_" + test_index + "/" + "test_"+ test_num + "_" + cc_name + ".txt";
-string temp ="/home/xyw/SLER/Bamboo-Public-dbx1000-bamboo/results_synthetic_ycsb/test_" + test_index + "/" + "test_"+ test_num + "_" + cc_name + ".txt";
+string temp ="/home/xyw/SLER/Bamboo-Public-dbx1000-bamboo/results_YCSB/test_" + test_index + "/" + "test_"+ test_num + "_" + cc_name + ".txt";
+//string temp ="/home/xyw/SLER/Bamboo-Public-dbx1000-bamboo/results_synthetic_ycsb/test_" + test_index + "/" + "test_"+ test_num + "_" + cc_name + ".txt";
 //string temp ="/home/xyw/SLER/Bamboo-Public-dbx1000-bamboo/results_TPCC/test_" + test_index + "/" + "test_"+ test_num + "_" + cc_name + ".txt";
 //
 

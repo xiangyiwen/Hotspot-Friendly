@@ -5,7 +5,7 @@
 // Simulation + Hardware
 /***********************************************/
 #define TERMINATE_BY_COUNT true
-#define THREAD_CNT					30
+#define THREAD_CNT					40
 #define PART_CNT					1
 // each transaction only accesses 1 virtual partition. But the lock/ts manager and index are not aware of such partitioning. VIRTUAL_PART_CNT describes the request distribution and is only used to generate queries. For HSTORE, VIRTUAL_PART_CNT should be the same as PART_CNT.
 #define VIRTUAL_PART_CNT			1
@@ -144,10 +144,10 @@
 #define INIT_PARALLELISM			40
 // SYNTH_TABLE_SIZE: tuple count of the YCSB table
 //#define SYNTH_TABLE_SIZE 100
-#define SYNTH_TABLE_SIZE 			10000000
-#define ZIPF_THETA 					0
-#define READ_PERC 					1
-#define WRITE_PERC 					0
+#define SYNTH_TABLE_SIZE 			20000000
+#define ZIPF_THETA 					0.9
+#define READ_PERC 					0.5
+#define WRITE_PERC 					0.5
 #define SCAN_PERC 					0
 #define SCAN_LEN					20
 #define PART_PER_TXN 				1
@@ -157,11 +157,11 @@
 
 //REQ_PER_QUERY: request count of a txn (short/normal transaction in YCSB)
 #define REQ_PER_QUERY				16
-#define LONG_TXN_RATIO              0.1
+#define LONG_TXN_RATIO              0
 #define LONG_TXN_READ_RATIO			1
 #define FIELD_PER_TUPLE				10
 // ==== [YCSB-synthetic] ====
-#define SYNTHETIC_YCSB              true
+#define SYNTHETIC_YCSB              false
 #define POS_HS                      RANDOM
 #define SPECIFIED_RATIO             1
 #define FLIP_RATIO                  0
@@ -301,14 +301,18 @@ extern TestCases					g_test_case;
 #define MB                          5
 #define SPECIFIED                   6
 
-#define TEST_NUM                    1
-#define TEST_INDEX                  2
+#define TEST_NUM                    2
+#define TEST_INDEX                  3
 
-#define ABORT_OPTIMIZATION          false
+#define ABORT_OPTIMIZATION          true
 
-#define DEADLOCK_DETECTION          false
-#define SLER_TIMEOUT                true
-#define ABORT_WAIT_TIME             0.5
+#define DEADLOCK_DETECTION          true
+#define SLER_TIMEOUT                false
+#define ABORT_WAIT_TIME             0.4
+
+#define VERSION_CHAIN_CONTROL       false
+
+//#define MAX_CHAIN_LENGTH            18
 
 #define PROJECTED_ELEMENT_COUNT     5
 #define FALSE_POSITIVE_PROBABILITY  0.05
