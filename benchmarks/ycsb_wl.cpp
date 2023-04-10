@@ -15,6 +15,7 @@
 #include "row_mvcc.h"
 #include "mem_alloc.h"
 #include "query.h"
+#include <math.h>
 
 
 int ycsb_wl::next_tid;
@@ -126,8 +127,13 @@ void * ycsb_wl::init_table_slice() {
     double slice_size = (double)g_synth_table_size / (double)g_init_parallelism;
 //	uint64_t slice_size = g_synth_table_size / g_init_parallelism;
 
+    /*[BUG]
+     * [Problem]: Calculation of double will cause loss of accuracy, so sometimes the result is bigger/smaller than the correct result.
+     * [Example]: When table_size = 50,000,000 and thread_cnt = 22, there will be an error, because slise_size*22 = 50000000.000000007 > 50000000, which makes the thread insert a wrong tuple(id = 50,000,000)
+     * [Solution]: This error will only happen in the last thread, so we can just modify " slice_size * (tid + 1)" to "min(slice_size * (tid + 1),(double)g_synth_table_size)".
+    */
 	for (uint64_t key = ceil(slice_size * tid);
-			key < slice_size * (tid + 1); 
+			key < min(slice_size * (tid + 1),(double)g_synth_table_size);
 			key ++
 	) {
 		row_t * new_row = NULL;
