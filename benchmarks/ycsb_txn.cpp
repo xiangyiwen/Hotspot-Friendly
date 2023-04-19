@@ -105,11 +105,23 @@ RC ycsb_txn_man::run_txn(base_query * query) {
                     assert(req->rtype == WR);
 //					for (int fid = 0; fid < schema->get_field_cnt(); fid++) {
                         int fid = 0;
-#if (CC_ALG == BAMBOO) || (CC_ALG == WOUND_WAIT)
+
+                        /*
+                         * [BUG in DBx1000]: Transaction should modify the ""row_local"" returned by get_row(), which is a new version in Hekaton and a local data copy in Silo and TicToc.
+                         * We shouldn't modify the "row" because it's the tuple that is visible to other transactions.
+                         * However, since "row_t" only stores the value, if we really modify "row", it won't affect the correctness of CC, because CC only uses locks and accesses.
+                         */
+//#if (CC_ALG == BAMBOO) || (CC_ALG == WOUND_WAIT)
                         char * data = row_local->get_data();
-#else
-                        char * data = row->get_data();
-#endif
+//#else
+//                        char * data = row->get_data();
+//#endif
+                        /*
+                         * Note that the expression "&data[fid * 10]" is used to access the memory address of the "fid"th element in the "data" array, where each element is assumed to be 10 bytes in size.
+                         * The "(uint64_t *)" typecast is used to interpret this memory address as a pointer to an unsigned 64-bit integer, which is then dereferenced and assigned the value 0.
+                         * This effectively sets the 8 bytes starting from the "fid"th position in the "data" array to 0.
+                         */
+                        // The real modification of an update operation.
                         *(uint64_t *)(&data[fid * 10]) = 0;
 //					}
                 }
