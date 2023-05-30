@@ -174,7 +174,8 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
         //4-3 Restrict the length of version chain. [Judge the priority of txn and threshold of tuple first.]
         uint64_t starttime_read = get_sys_clock();
 //        double timeout_span = ((double)THREAD_CNT/180-(double)4/180)*1000000UL;
-        double timeout_span = (THREAD_CNT >= 18)? 0.1*1000000UL : 0;
+//        double timeout_span = (THREAD_CNT >= 18)? 0.1*1000000UL : 0;
+        double timeout_span = 0.1*1000000UL;
         while (txn->priority < (double)threshold && (double)(get_sys_clock() - starttime_read) < 0.1*1000000UL){
             PAUSE
         }
@@ -437,7 +438,8 @@ RC Row_sler::access(txn_man * txn, TsType type, Access * access){
         //4-3 Restrict the length of version chain. [Judge the priority of txn and threshold of tuple first.]
         uint64_t starttime_write = get_sys_clock();
 //        double timeout_span = ((double)THREAD_CNT/180-(double)4/180)*1000000UL;
-        double timeout_span = (THREAD_CNT >= 18)? 0.1*1000000UL : 0;
+//        double timeout_span = (THREAD_CNT >= 18)? 0.1*1000000UL : 0;
+        double timeout_span = 0.1*1000000UL;
         while (txn->priority < (double)threshold && (double)(get_sys_clock() - starttime_write) < 0.1*1000000UL){
             PAUSE
         }

@@ -4,6 +4,7 @@ cc_name=(NO_WAIT WAIT_DIE HEKATON SILO TICTOC SLER)
 
 sed -i '21s/.*/#define WORKLOAD 					TPCC/g' config.h
 sed -i '185s/.*/#define NUM_WH 						1/g' config.h
+sed -i '208s/.*/#define TPCC_USER_ABORT             true/g' config.h
 
 #sed -i '147s/.*/#define SYNTH_TABLE_SIZE 			10000000/g' config.h
 #sed -i '148s/.*/#define ZIPF_THETA 					0/g' config.h

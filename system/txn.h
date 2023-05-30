@@ -480,13 +480,12 @@ class txn_man
                 ATOM_ADD(sler_semaphore, 1);
             }
         }
-
     }
 
 #if VERSION_CHAIN_CONTROL
 //    4-3 Restrict the length of version chain.
     void PriorityAddOne() {
-        priority += 1;
+        priority ++;
     }
 #endif
 #endif
