@@ -86,5 +86,3 @@ dbms benchmark has the following parameters in the config file. Parameters with 
   FIRSTNAME_LEN	: length of first name
   MIDDLE_LEN	: length of middle name
   LASTNAME_LEN	: length of last name
-
-  // !! centralized CC management should be ignored.
