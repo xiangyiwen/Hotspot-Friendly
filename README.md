@@ -1,49 +1,46 @@
-DBx1000-Bamboo
+Hotspot-Friendly
 ==============
-The repository is built on DBx1000: https://github.com/yxymit/DBx1000 
+Hotspot-Friendly is a multi-version optimistic concurrency control protocol, which delivers both high throughput and low abort rate. This protocol is especially designed for workloads that contain hotspots. 
 
-    Staring into the Abyss: An Evaluation of Concurrency Control with One Thousand Cores
-    Xiangyao Yu, George Bezerra, Andrew Pavlo, Srinivas Devadas, Michael Stonebraker
-    http://www.vldb.org/pvldb/vol8/p209-yu.pdf
-    
-The major changes made in this repository:
-- added support for Bamboo and its optimizations. Bamboo is a concurrency control protocol proposed in:
-```
-    Releasing Locks As Early As You Can: Reducing Contention of Hotspots by Violating Two-Phase Locking
-    Zhihan Guo, Kan Wu, Cong Yan, Xiangyao Yu
-    link (TBA)
-```
-- focused on support for: NO_WAIT, WOUND_WAIT, WAIT_DIE, SILO, IC3
-- changed the memory allocation for lock entry to be static
-- added support for MCS Lock in addition to mutex and spinlock
-- modified test scripts for easier evaluation
+The repository is built on an extension of DBx1000: https://github.com/ScarletGuo/Bamboo-Public. We have fixed several bugs inherited from the original DBx1000 implementation.
 
-
-Build & Test
+Build
 ------------
 
-To test the database
+To build the database.
 
-    python test.py experiments/default.json
-
+    cmake -DTBB_DIR=~/tbb/cmake
+    cmake -DCMAKE_BUILD_TYPE=Release
+    make -j
     
-Configure & Run
+To test the database.
+
+    ./rundb
+
+Configuration
 ---------------
 
-Supported configuration parameters can be found in config-std.h file. Extra configuration parameters include: 
+DBMS configurations can be changed in the config.h file. For the meaning of each configuration inherited from the original DBx1000, please refer to README file. 
+Extra configuration parameters specific to Hotspot-Friendly include: 
 ```
-    UNSET_NUMA        : default is false. If set false, it will disable numa effect by interleavingly allocate data. 
-    NDEBUG            : default is true. If set true, it will disable all assert()
-    COMPILE_ONLY      : defalut is false. If set false, it will compile first and then automatically execute. 
+    ABORT_OPTIMIZATION        : By defaul, it is true. If set false, it will disable the optimization for minimizing unnecessary 𝑙𝑎𝑡𝑐ℎ occupancy during a transaction’s abort procedure.
+    VERSION_CHAIN_CONTROL     : By defaul, it is true. If set false, it will disable the optimization for reducing the probability of cascading aborts.
+    DEADLOCK_DETECTION        : By defaul, it is true. If set false, it will disable the dead-dependency detection.
+    HOTSPOT_FRIENDLY_TIMEOUT  : By defaul, it is false. If set true, it will enable the timeout mechanism. Specifically, a transaction will abort if it waits for depended transactions to commit during the validation phase and exceeds the ABORT_WAIT_TIME.
+    ABORT_WAIT_TIME           : The waiting threshold for the timeout mechanism. (1 means 1ms)
+    CC_ALG 					  : Concurrency control protocols. Six protocols are supported (NO_WAIT WAIT_DIE TICTOC SILO HOTSPOT_FRIENDLY).
 ```
-Options to change/pass configuration:
-- Option 1: use basic configurations provided in experiments/default.json. overwrite existing configurations or pass extra configurations through arguments. 
-    e.g. ```python test.py experiments/default.json WORKLOAD=TPCC NUM_WH=1```
-- Option 2: directly copy config-std.h to config.h and modify config.h. Then compile using ```make -j``` and execute through ```./rundb ```
 
 
+Run
+------------
+
+To run the database.
+
+    ./rundb
 
 
-
-
+Test Results
+------------
+We compare the performance of six supported protocols across diverse workloads in a server equipped with an Intel Xeon Gold 5218R CPU (20 physical cores@2.10GHz and 27.5 MiB LLC) and 96 GiB DDR4 DRAM, running Ubuntu 20.04.3 LTS. Each core supports two hardware threads, resulting in a total of 40 threads. Each experiment was repeated five times. The final results are the average of five experimental results. It is important to note that no other background processes should be running during the experiments. The experimental results are attached here (including the configurations for each experiments).
 
