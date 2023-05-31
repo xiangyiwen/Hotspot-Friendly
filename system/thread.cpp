@@ -110,7 +110,7 @@ RC thread_t::run() {
 						break;
 				}
 			}else {
-				if (rc == RCOK || rc == ERROR) {           // 11-29: Make TPC-C available for HOTSPOT_FRIENDLY.
+				if (rc == RCOK || rc == ERROR) {           // Make TPC-C available for HOTSPOT_FRIENDLY.
 					m_query = query_queue->get_next_query( _thd_id );
 
                     m_query->rerun = false;
@@ -140,28 +140,12 @@ RC thread_t::run() {
                 if (unlikely(m_txn->get_ts() == 0))
                     m_txn->set_ts(get_next_ts());
         #elif CC_ALG == HOTSPOT_FRIENDLY
-//                uint64_t temp_thread_id = (get_thd_id() >> 32) & 0xffffffff;
-//                m_txn->hotspot_friendly_txn_id = temp_thread_id << 32 | (get_sys_clock() & 0xffffffff);
-                if(m_txn->hotspot_friendly_semaphore !=0){          //11-21 DEBUG
-                    cout << "hotspot_friendly_semaphore: " << m_txn->hotspot_friendly_semaphore << endl;
-                    cout << "status: " << m_txn->status << endl;
-                }
-
                 m_txn->hotspot_friendly_txn_id = (get_thd_id() << 32) | (get_sys_clock() & 0xffffffff);
         #if DEADLOCK_DETECTION
                 m_txn->InsertWaitingSet(m_txn->get_hotspot_friendly_txn_id());               // Initialize waiting set
         #endif
 
-                // 2-16 DEBUG
-//                while(!ATOM_CAS(m_txn->status_latch, false, true))
-//                    PAUSE
-//                m_txn->status = RUNNING;
-//                m_txn->status_latch = false;
-
                 m_txn->status = RUNNING;
-//                m_txn->hotspot_friendly_dependency.clear();
-
-                // 2-16 DEBUG
                 m_txn->hotspot_friendly_semaphore = 0;
                 assert(m_txn->hotspot_friendly_semaphore == 0);
                 assert(m_txn->hotspot_friendly_dependency.empty());

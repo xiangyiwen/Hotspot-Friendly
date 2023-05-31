@@ -25,9 +25,6 @@ void txn_man::init(thread_t * h_thd, workload * h_wl, uint64_t thd_id) {
 #endif
 #if CC_ALG == BAMBOO
     commit_barriers = 0;
-    //commit_barriers = g_thread_cnt << 2;
-    //tmp_barriers = 0;
-    //addr_barriers = &(tmp_barriers);
 #endif
     ready_part = 0;
     row_cnt = 0;
@@ -40,48 +37,28 @@ void txn_man::init(thread_t * h_thd, workload * h_wl, uint64_t thd_id) {
         accesses[i] = NULL;
 
 #if CC_ALG == HOTSPOT_FRIENDLY
-//    write_row_cnt = 0;
-    //12-6
-//    uncommitted_cnt = 0;
-//    dependency_cnt = 0;
-
     hotspot_friendly_semaphore = 0;
     hotspot_friendly_serial_id = 0;
     status_latch = false;
-//    serial_id_latch = false;
-//    dependency_latch = false;
-//    waiting_set_latch = false;
-//    semaphore_latch = false;
-
-    //12-12
-//    hotspot_friendly_dependency = new tbb::concurrent_vector<dep_element>();
 
 #if DEADLOCK_DETECTION
     bloom_parameters parameters;
     parameters.projected_element_count = 5;
     parameters.false_positive_probability = 0.05;
 
-//    auto projected_ele_cnt = THREAD_CNT >= 40 ? 40: THREAD_CNT;
-//    parameters.projected_element_count = projected_ele_cnt;
-
-//    parameters.projected_element_count = THREAD_CNT;
-
-//    parameters.false_positive_probability = FALSE_POSITIVE_PROBABILITY;
-
     parameters.compute_optimal_parameters();
-
     bloom_filter temp_bloom(parameters);
     hotspot_friendly_waiting_set = temp_bloom;
 #endif
 
-    // 2-27 Optimization for read_only long transaction.
+    // Optimization for read_only long transaction.
 #if READ_ONLY_OPTIMIZATION_ENABLE
     is_long = false;
     read_only = false;
 #endif
 
 #if VERSION_CHAIN_CONTROL
-//    4-3 Restrict the length of version chain.
+    // Restrict the length of version chain.
     priority = 0;
 #endif
 
@@ -120,8 +97,6 @@ void txn_man::set_txn_id(txnid_t txn_id) {
     status = RUNNING;
     #if CC_ALG == BAMBOO
         commit_barriers = 0;
-        //commit_barriers = g_thread_cnt << 2;
-        //addr_barriers = &(tmp_barriers);
         if (g_last_retire > 0)
             start_ts = get_sys_clock();
     #endif
@@ -177,23 +152,11 @@ ts_t txn_man::get_ts() {
 
 void txn_man::cleanup(RC rc) {
 #if CC_ALG == HOTSPOT_FRIENDLY
-
-    // 12-6
-//    uncommitted_cnt = 0;
-//    dependency_cnt = 0;
-//    dep_debug.clear();
-//    wait_list.clear();
-
     hotspot_friendly_txn_id = 0;
     hotspot_friendly_serial_id = 0;
     hotspot_friendly_semaphore = 0;
 
-//    auto before_address = hotspot_friendly_dependency;
-//    for(auto & i : hotspot_friendly_dependency) {
-//        i.dep_type = INVALID;
-//    }
     hotspot_friendly_dependency.clear();
-//    hotspot_friendly_dependency.shrink_to_fit();          // may cause retrieving an uninitialized element(eg. Read_Write),shouldn't call it
 
 #if DEADLOCK_DETECTION
     hotspot_friendly_waiting_set.clear();
@@ -202,20 +165,19 @@ void txn_man::cleanup(RC rc) {
     row_cnt = 0;
     wr_cnt = 0;
     insert_cnt = 0;
-//    write_row_cnt = 0;
 
-    // 2-27 Optimization for read_only long transaction.
+    // Optimization for read_only long transaction.
 #if READ_ONLY_OPTIMIZATION_ENABLE
     is_long = false;
     read_only = false;
 #endif
 
 #if VERSION_CHAIN_CONTROL
-    //4-3 Restrict the length of version chain.
+    // Restrict the length of version chain.
     priority = 0;
 #endif
 
-    //12-13 for READ_WRITE test can pass the assertion
+    // for READ_WRITE test can pass the assertion
 #if WORKLOAD == TEST
     status = RUNNING;
 #endif
@@ -314,7 +276,7 @@ void txn_man::cleanup(RC rc) {
         dl_detector.clear_dep(get_txn_id());
     #endif
 
-    #if CC_ALG == BAMBOO                // 12-5: make BamBoo support TEST workload
+    #if CC_ALG == BAMBOO                // Make BamBoo support TEST workload
         commit_barriers = 0;
     #endif
 
@@ -400,20 +362,14 @@ row_t * txn_man::get_row(row_t * row, access_t type) {
             assign_lock_entry(access);
             access->orig_data = (row_t *) _mm_malloc(sizeof(row_t), 64);
             access->orig_data->init(MAX_TUPLE_SIZE);
-//        #elif CC_ALG == HOTSPOT_FRIENDLY        //[HOTSPOT_FRIENDLY]: we don't need to allocate the space of data
-//            access->data = (row_t *) _mm_malloc(sizeof(row_t), 64);
-//            access->data->init(MAX_TUPLE_SIZE);
         #endif
 
             num_accesses_alloc++;
     }
 
-
-
     /**
      *  Actually access the row.
      */
-    //printf("txn-%lu access(%p) row %p at access[%d]\n", txn_id, accesses[row_cnt], row , row_cnt);
     #if (CC_ALG == WOUND_WAIT) || (CC_ALG == BAMBOO)
         rc = row->get_row(type, this, accesses[ row_cnt ]->orig_row, accesses[row_cnt]);
         if (rc == Abort) {
@@ -446,7 +402,6 @@ row_t * txn_man::get_row(row_t * row, access_t type) {
         if (rc == Abort) {
             return NULL;
         }
-//        accesses[row_cnt]->orig_row = row;
         auto temp_version = (Version*) accesses[row_cnt]->tuple_version;
         temp_version->data = row;
     #else
@@ -463,7 +418,6 @@ row_t * txn_man::get_row(row_t * row, access_t type) {
         }
     #endif
 
-
     /**
      * Set the operation type of a certain access [row->get_row() successfully, so we can set access object directly]
      */
@@ -477,7 +431,6 @@ row_t * txn_man::get_row(row_t * row, access_t type) {
     #elif CC_ALG == HEKATON
         accesses[row_cnt]->history_entry = history_entry;
     #endif
-
 
     /**
      * [type==WR]:
@@ -534,15 +487,7 @@ row_t * txn_man::get_row(row_t * row, access_t type) {
     #elif CC_ALG == IC3
         return accesses[row_cnt - 1]->data;
     #elif CC_ALG == HOTSPOT_FRIENDLY
-    //        return accesses[row_cnt - 1]->data;
-    //        return row;
     auto res_version = (Version*) accesses[row_cnt - 1]->tuple_version;
-
-    // DEBUG 12-5
-    if(res_version->data == NULL) {
-        printf("ERROR!\n");
-    }
-
     return res_version->data;
 
     #else
@@ -650,23 +595,14 @@ RC txn_man::finish(RC rc) {
       status = ABORTED;
   else {
     uint64_t starttime = get_sys_clock();
-    //int times = 0;
-    // aggregate barrier
-    // addr_barriers = &(commit_barriers);
-    // COMPILER_BARRIER
-    // ATOM_ADD(commit_barriers, tmp_barriers);
-    // ATOM_SUB(commit_barriers, g_thread_cnt << 2);
     while (!ATOM_CAS(commit_barriers, 0, COMMITED)) {
         if (commit_barriers & ABORTED) {
             rc = Abort;
             break;
         }
         if (g_last_retire > 0 && (retire_threshold < row_cnt - 1)) {
-            //times++;
-            //if (times >= 10) {
                 uint64_t lapse = get_sys_clock();
                 if ((lapse - starttime) >= (lapse - start_ts) * g_last_retire) {
-            //printf("late retire\n");
                     for (int rid = row_cnt - 1; rid > retire_threshold; rid--) {
                         if (accesses[rid]->lock_entry->type == LOCK_SH)
                             continue;
@@ -674,10 +610,6 @@ RC txn_man::finish(RC rc) {
                     }
                     retire_threshold = row_cnt - 1;
                 }
-            //if ( (double)(lapse-starttime)/(lapse - start_ts) > 0)
-            //    printf("%.6f\n", (lapse - starttime) / (lapse - start_ts));
-           //     times = 0;
-           // }
         }
     }
 #if PF_BASIC 
@@ -695,11 +627,9 @@ RC txn_man::finish(RC rc) {
 
 #if TPCC_USER_ABORT
     if (rc == Abort && (ret_rc == ERROR)) {
-        //printf("txn-%lu user init abort! \n", txn_id);
         return ret_rc;
     }
 #endif
-    //printf("txn-%lu finished status=%d\n", txn_id, status);
     return rc;
 }
 
@@ -713,11 +643,9 @@ void txn_man::release() {
     }
     mem_allocator.free(accesses, 0);
 
-    // 2-17
 #if LATCH == LH_MCSLOCK
     delete mcs_node;
 #endif
-//    delete mcs_node;
 #endif
 }
 

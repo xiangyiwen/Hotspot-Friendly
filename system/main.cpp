@@ -73,8 +73,6 @@ int main(int argc, char* argv[])
 	m_thds = new thread_t * [thd_cnt];
 	for (uint32_t i = 0; i < thd_cnt; i++)
 		m_thds[i] = (thread_t *) _mm_malloc(sizeof(thread_t), 64);
-	// query_queue should be the last one to be initialized!!!
-	// because it collects txn latency
 	query_queue = (Query_queue *) _mm_malloc(sizeof(Query_queue), 64);
 	if (WORKLOAD != TEST)
 		query_queue->init(m_wl);
@@ -126,13 +124,6 @@ int main(int argc, char* argv[])
 			stats.print();
 	} else {
 		((TestWorkload *)m_wl)->summarize();
-
-        // 12-13 Test: HOTSPOT_FRIENDLY has much lower abort rate
-        /*
-        printf("PASS! SimTime = %ld\n", endtime - starttime);
-        if (STATS_ENABLE)
-            stats.print();
-        */
 	}
 	return 0;
 }

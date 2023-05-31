@@ -24,9 +24,7 @@ struct BBLockEntry;
 //For VLL
 enum TxnType {VLL_Blocked, VLL_Free};
 
-/**
- * HOTSPOT_FRIENDLY: operation type, Version* pointer
- */
+
 class Access {
   public:
     access_t 	type;       // operation type
@@ -36,7 +34,6 @@ class Access {
     row_t * 	orig_data;
 
 #if CC_ALG == HOTSPOT_FRIENDLY
-    //Version * tuple_version    [ Compile Error: Version cannot be recognized as a type ]
     void*    tuple_version;              // points to the tuple version accessed by txn
 #endif
 #if CC_ALG == BAMBOO
@@ -119,9 +116,7 @@ class txn_man
     // ideal second cache line
 
     // [BAMBOO]
-//    #if CC_ALG != HOTSPOT_FRIENDLY
     ts_t volatile       timestamp;
-//    #endif
 
     uint8_t             padding1[64 - sizeof(ts_t)];
     // share its own cache line since it happens tooooo frequent.
@@ -152,23 +147,15 @@ class txn_man
     // [TICTOC]
     bool                _write_copy_ptr;
 #if CC_ALG == HOTSPOT_FRIENDLY
-//    struct dep_element{
-//        uint64_t origin_txn_id;             // the txn_id of retire_txn, used in writing phase to avoid wrong semaphore--
-//        DepType dep_type;
-//    };
-    // typedef tbb::concurrent_unordered_map<txn_man*, dep_element> Dependency;
-
-//    int write_row_cnt;
-
     struct dep_element{
         txn_man* dep_txn;
         uint64_t dep_txn_id;             // the txn_id of retire_txn, used in writing phase to avoid wrong semaphore--
         DepType dep_type;
     };
-    typedef  tbb::concurrent_vector<dep_element> Dependency;   //12-12
-    uint64_t            hotspot_friendly_txn_id;              // we can directly record txn* in retire field, this txn_id is used in waiting_set
+    typedef  tbb::concurrent_vector<dep_element> Dependency;
+    uint64_t            hotspot_friendly_txn_id;
     uint64_t            hotspot_friendly_serial_id;
-    uint64_t            hotspot_friendly_semaphore;            // 2-16 DEBUG : The read operation of int64 is atomic.
+    uint64_t            hotspot_friendly_semaphore;
 
 #if READ_ONLY_OPTIMIZATION_ENABLE
     // Optimization for read_only long transaction.
@@ -185,25 +172,8 @@ class txn_man
 #if DEADLOCK_DETECTION
     bloom_filter        hotspot_friendly_waiting_set;           // Deadlock Detection
 #endif
-
-//    #if LATCH == LH_SPINLOCK
     volatile bool       status_latch;
-    volatile bool       dependency_latch;
-    volatile bool       waiting_set_latch;
-    volatile bool       semaphore_latch;
-    volatile bool       serial_id_latch;
 
-//    #elif LATCH == LH_MUTEX
-//        pthread_mutex_t * status_latch;
-//        pthread_mutex_t * dependency_latch;
-//        pthread_mutex_t * waiting_set_latch;
-//        pthread_mutex_t * semaphore_latch;
-//    #else
-//        mcslock * status_latch;
-//        mcslock * dependency_latch;
-//        mcslock * waiting_set_latch;
-//        mcslock * semaphore_latch;
-//    #endif
 #elif CC_ALG == TICTOC
     bool			    _atomic_timestamp;
     ts_t 			    _max_wts;
@@ -312,7 +282,6 @@ class txn_man
                 return status;
         }
         else{           // Possible: mis-kill
-//            assert(false);
             return status;
         }
       #else
@@ -361,50 +330,10 @@ class txn_man
 
     inline uint64_t 	get_hotspot_friendly_txn_id(){return this->hotspot_friendly_txn_id;}
 
-    /* Helper Function for dependency*/
-    /*
-//    bool_dep PushDependency(txn_man *dep_txn, uint64_t txn_id,DepType depType) {
-//        if(hotspot_friendly_dependency.find(dep_txn) != hotspot_friendly_dependency.end()){
-//            DepType current_type = hotspot_friendly_dependency[dep_txn].dep_type;
-//            if((current_type & depType) != 0){
-//                return CONTAIN_TXN_AND_TYPE;
-//            }
-//            else{
-//                depType = DepType(depType | current_type);
-//                hotspot_friendly_dependency[dep_txn].dep_type = depType;
-//                return CONTAIN_TXN;
-//            }
-//        }
-//        else{
-//            hotspot_friendly_dependency[dep_txn].origin_txn_id = txn_id;
-//            hotspot_friendly_dependency[dep_txn].dep_type = depType;
-//            return NOT_CONTAIN;
-//        }
-//    }
-     */
-
     void PushDependency(txn_man *dep_txn, uint64_t dep_txn_id,DepType depType) {
-        //12-6
-//        dependency_cnt ++;
-
         dep_element temp_element = {dep_txn,dep_txn_id,depType};
         hotspot_friendly_dependency.push_back(temp_element);
     }
-
-    /*
-//    void PushDependency(DepType depType, txn_man * insert_txn , uint64_t insert_txn_id) {
-//        dep_element temp_element = {insert_txn,insert_txn_id,depType};
-////        hotspot_friendly_dependency.push_back(temp_element);
-//
-//        //12-6
-//        dep_debug.push_back(temp_element);
-//    }
-
-//    void PushWaitList(txn_man *wait_txn, uint64_t wait_txn_id,DepType waitType) {
-//        dep_element temp_element = {wait_txn,wait_txn_id,waitType};
-//        wait_list.push_back(temp_element);
-//    }
-     */
 
 #if DEADLOCK_DETECTION
     /* Helper Functions for waiting_set */
@@ -413,18 +342,16 @@ class txn_man
         hotspot_friendly_waiting_set.insert(txn_id);
     }
 
-    //judge whether an element is in waiting_set
+    // Judge whether an element is in waiting_set
     bool WaitingSetContains(uint64_t txn_id) {
         return hotspot_friendly_waiting_set.contains(txn_id);
     }
 
-    //update waiting_set
-    // 3-13 debug: This should be a recursive call. Or there may be a deadlock.
+    // Update waiting_set
+    // This should be a recursive call. Or there may be a deadlock.
     void UnionWaitingSet(const bloom_filter& wait_set){
         hotspot_friendly_waiting_set |= wait_set;
 
-        //更新依赖链表中所有事务的 waiting_set
-//        auto deps = this->hotspot_friendly_dependency;
         for (auto &dep_pair: hotspot_friendly_dependency) {
             if (!dep_pair.dep_type) {                    // we may get an element before it being initialized(empty data / wrong data)
                 break;
@@ -444,18 +371,10 @@ class txn_man
 #endif
 
     void SemaphoreAddOne() {
-        //12-6
-//        uncommitted_cnt++;
-
-//2-16 DEBUG
-//        hotspot_friendly_semaphore++;
         ATOM_ADD(hotspot_friendly_semaphore, 1);
-        //Equal to semaphore.fetch_add(1);
     }
 
     void SemaphoreSubOne() {
-//2-16 DEBUG
-//        hotspot_friendly_semaphore--;
         if(hotspot_friendly_semaphore == 0) {
             // This is an aggressive subtraction, this txn_man has already started a new transaction, so semaphore shouldn't be subtracted.
         }
@@ -467,12 +386,12 @@ class txn_man
         }
     }
 
-#if VERSION_CHAIN_CONTROL
-//    4-3 Restrict the length of version chain.
-    void PriorityAddOne() {
-        priority ++;
-    }
-#endif
+    #if VERSION_CHAIN_CONTROL
+        // Restrict the length of version chain.
+        void PriorityAddOne() {
+            priority ++;
+        }
+    #endif
 #endif
 
   protected:
