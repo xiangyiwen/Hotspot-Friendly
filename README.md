@@ -40,6 +40,8 @@ Options to change/pass configuration:
 - Option 1: use basic configurations provided in experiments/default.json. overwrite existing configurations or pass extra configurations through arguments. 
     e.g. ```python test.py experiments/default.json WORKLOAD=TPCC NUM_WH=1```
 - Option 2: directly copy config-std.h to config.h and modify config.h. Then compile using ```make -j``` and execute through ```./rundb ```
+- 
+- 
 
 
 
