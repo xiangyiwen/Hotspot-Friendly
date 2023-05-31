@@ -6,7 +6,7 @@
 #include "mem_alloc.h"
 #include "row_occ.h"
 
-#if CC_ALG != SLER
+#if CC_ALG != HOTSPOT_FRIENDLY
 
 set_ent::set_ent() {
 	set_size = 0;

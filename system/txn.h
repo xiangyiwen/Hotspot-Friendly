@@ -25,7 +25,7 @@ struct BBLockEntry;
 enum TxnType {VLL_Blocked, VLL_Free};
 
 /**
- * SLER: operation type, Version* pointer
+ * HOTSPOT_FRIENDLY: operation type, Version* pointer
  */
 class Access {
   public:
@@ -35,7 +35,7 @@ class Access {
     row_t * 	orig_row;
     row_t * 	orig_data;
 
-#if CC_ALG == SLER
+#if CC_ALG == HOTSPOT_FRIENDLY
     //Version * tuple_version    [ Compile Error: Version cannot be recognized as a type ]
     void*    tuple_version;              // points to the tuple version accessed by txn
 #endif
@@ -119,7 +119,7 @@ class txn_man
     // ideal second cache line
 
     // [BAMBOO]
-//    #if CC_ALG != SLER
+//    #if CC_ALG != HOTSPOT_FRIENDLY
     ts_t volatile       timestamp;
 //    #endif
 
@@ -141,9 +141,7 @@ class txn_man
 
     int 			    row_cnt;                // the count of tuples I access
     int	 		        wr_cnt;                 // the count of tuples I modify
-//#if CC_ALG == SLER
-//    unordered_map<uint64_t, Access*>    sler_accesses;
-//#endif
+
     Access **		    accesses;
     int 			    num_accesses_alloc;
 
@@ -153,7 +151,7 @@ class txn_man
     int volatile 	    ready_part;
     // [TICTOC]
     bool                _write_copy_ptr;
-#if CC_ALG == SLER
+#if CC_ALG == HOTSPOT_FRIENDLY
 //    struct dep_element{
 //        uint64_t origin_txn_id;             // the txn_id of retire_txn, used in writing phase to avoid wrong semaphore--
 //        DepType dep_type;
@@ -168,13 +166,12 @@ class txn_man
         DepType dep_type;
     };
     typedef  tbb::concurrent_vector<dep_element> Dependency;   //12-12
-    uint64_t            sler_txn_id;              // we can directly record txn* in retire field, this txn_id is used in waiting_set
-    uint64_t            sler_serial_id;
-//    atomic<uint64_t>    sler_semaphore;
-    uint64_t            sler_semaphore;            // 2-16 DEBUG : The read operation of int64 is atomic.
+    uint64_t            hotspot_friendly_txn_id;              // we can directly record txn* in retire field, this txn_id is used in waiting_set
+    uint64_t            hotspot_friendly_serial_id;
+    uint64_t            hotspot_friendly_semaphore;            // 2-16 DEBUG : The read operation of int64 is atomic.
 
 #if READ_ONLY_OPTIMIZATION_ENABLE
-    // 2-27 Optimization for read_only long transaction.
+    // Optimization for read_only long transaction.
     bool                is_long;
     bool                read_only;
 #endif
@@ -184,23 +181,11 @@ class txn_man
     double            priority;           // Only the transaction itself can update the priority, so we can simply declare it a uint64_t.
 #endif
 
-    //12-6 DEBUG
-//    int                 uncommitted_cnt;
-//    atomic<int>                 dependency_cnt;
-//    vector<dep_element> dep_debug;
-
-    Dependency          sler_dependency;
+    Dependency          hotspot_friendly_dependency;
 #if DEADLOCK_DETECTION
-    bloom_filter        sler_waiting_set;           // Deadlock Detection
+    bloom_filter        hotspot_friendly_waiting_set;           // Deadlock Detection
 #endif
 
-    // 12- 6 DEBUG
-//    vector<dep_element> wait_list;
-
-
-    //WriteSet            sler_write_set;           // since no tuple will be accessed twice in YCSB, we don't need it right now
-
-    // make sure that status, dependency, waiting_set, semaphore is accessed exclusively
 //    #if LATCH == LH_SPINLOCK
     volatile bool       status_latch;
     volatile bool       dependency_latch;
@@ -316,7 +301,7 @@ class txn_man
             return ABORTED;
        }
        return status;       // COMMITED or ABORTED
-      #elif CC_ALG == SLER
+      #elif CC_ALG == HOTSPOT_FRIENDLY
         if(status == ABORTED){
             return ABORTED;
         }
@@ -370,29 +355,29 @@ class txn_man
     // [SILO]
 #elif CC_ALG == SILO
     RC				    validate_silo();
-#elif CC_ALG == SLER
-    RC                  validate_sler(RC rc);
+#elif CC_ALG == HOTSPOT_FRIENDLY
+    RC                  validate_hotspot_friendly(RC rc);
     void                abort_process(txn_man * txn);
 
-    inline uint64_t 	get_sler_txn_id(){return this->sler_txn_id;}
+    inline uint64_t 	get_hotspot_friendly_txn_id(){return this->hotspot_friendly_txn_id;}
 
     /* Helper Function for dependency*/
     /*
 //    bool_dep PushDependency(txn_man *dep_txn, uint64_t txn_id,DepType depType) {
-//        if(sler_dependency.find(dep_txn) != sler_dependency.end()){
-//            DepType current_type = sler_dependency[dep_txn].dep_type;
+//        if(hotspot_friendly_dependency.find(dep_txn) != hotspot_friendly_dependency.end()){
+//            DepType current_type = hotspot_friendly_dependency[dep_txn].dep_type;
 //            if((current_type & depType) != 0){
 //                return CONTAIN_TXN_AND_TYPE;
 //            }
 //            else{
 //                depType = DepType(depType | current_type);
-//                sler_dependency[dep_txn].dep_type = depType;
+//                hotspot_friendly_dependency[dep_txn].dep_type = depType;
 //                return CONTAIN_TXN;
 //            }
 //        }
 //        else{
-//            sler_dependency[dep_txn].origin_txn_id = txn_id;
-//            sler_dependency[dep_txn].dep_type = depType;
+//            hotspot_friendly_dependency[dep_txn].origin_txn_id = txn_id;
+//            hotspot_friendly_dependency[dep_txn].dep_type = depType;
 //            return NOT_CONTAIN;
 //        }
 //    }
@@ -403,13 +388,13 @@ class txn_man
 //        dependency_cnt ++;
 
         dep_element temp_element = {dep_txn,dep_txn_id,depType};
-        sler_dependency.push_back(temp_element);
+        hotspot_friendly_dependency.push_back(temp_element);
     }
 
     /*
 //    void PushDependency(DepType depType, txn_man * insert_txn , uint64_t insert_txn_id) {
 //        dep_element temp_element = {insert_txn,insert_txn_id,depType};
-////        sler_dependency.push_back(temp_element);
+////        hotspot_friendly_dependency.push_back(temp_element);
 //
 //        //12-6
 //        dep_debug.push_back(temp_element);
@@ -425,33 +410,33 @@ class txn_man
     /* Helper Functions for waiting_set */
     // Record a txn in waiting_set
     void InsertWaitingSet(uint64_t txn_id) {
-        sler_waiting_set.insert(txn_id);
+        hotspot_friendly_waiting_set.insert(txn_id);
     }
 
     //judge whether an element is in waiting_set
     bool WaitingSetContains(uint64_t txn_id) {
-        return sler_waiting_set.contains(txn_id);
+        return hotspot_friendly_waiting_set.contains(txn_id);
     }
 
     //update waiting_set
     // 3-13 debug: This should be a recursive call. Or there may be a deadlock.
     void UnionWaitingSet(const bloom_filter& wait_set){
-        sler_waiting_set |= wait_set;
+        hotspot_friendly_waiting_set |= wait_set;
 
         //更新依赖链表中所有事务的 waiting_set
-//        auto deps = this->sler_dependency;
-        for (auto &dep_pair: sler_dependency) {
+//        auto deps = this->hotspot_friendly_dependency;
+        for (auto &dep_pair: hotspot_friendly_dependency) {
             if (!dep_pair.dep_type) {                    // we may get an element before it being initialized(empty data / wrong data)
                 break;
             }
             assert(dep_pair.dep_type != READ_WRITE_);
 
             // There's already a deadlock.
-            if (WaitingSetContains(dep_pair.dep_txn->sler_txn_id) && dep_pair.dep_txn->status == RUNNING) {
+            if (WaitingSetContains(dep_pair.dep_txn->hotspot_friendly_txn_id) && dep_pair.dep_txn->status == RUNNING) {
                 set_abort();
             }else {
-                if (dep_pair.dep_txn->get_sler_txn_id() == dep_pair.dep_txn_id && dep_pair.dep_txn->status == RUNNING) {           // Don't inform the txn_manager who is already running a new txn.
-                    dep_pair.dep_txn->UnionWaitingSet(sler_waiting_set);
+                if (dep_pair.dep_txn->get_hotspot_friendly_txn_id() == dep_pair.dep_txn_id && dep_pair.dep_txn->status == RUNNING) {           // Don't inform the txn_manager who is already running a new txn.
+                    dep_pair.dep_txn->UnionWaitingSet(hotspot_friendly_waiting_set);
                 }
             }
         }
@@ -463,21 +448,21 @@ class txn_man
 //        uncommitted_cnt++;
 
 //2-16 DEBUG
-//        sler_semaphore++;
-        ATOM_ADD(sler_semaphore, 1);
+//        hotspot_friendly_semaphore++;
+        ATOM_ADD(hotspot_friendly_semaphore, 1);
         //Equal to semaphore.fetch_add(1);
     }
 
     void SemaphoreSubOne() {
 //2-16 DEBUG
-//        sler_semaphore--;
-        if(sler_semaphore == 0) {
+//        hotspot_friendly_semaphore--;
+        if(hotspot_friendly_semaphore == 0) {
             // This is an aggressive subtraction, this txn_man has already started a new transaction, so semaphore shouldn't be subtracted.
         }
         else {
-            auto new_val = ATOM_SUB_FETCH(sler_semaphore,1);
+            auto new_val = ATOM_SUB_FETCH(hotspot_friendly_semaphore,1);
             if(new_val == UINT64_MAX) {
-                ATOM_ADD(sler_semaphore, 1);
+                ATOM_ADD(hotspot_friendly_semaphore, 1);
             }
         }
     }

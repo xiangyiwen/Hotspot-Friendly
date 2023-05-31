@@ -1,7 +1,6 @@
 #pragma once
 
 #include "global.h"
-//#include "row_sler.h"
 
 #define DECL_SET_VALUE(type) \
 	void set_value(int col_id, type value);
@@ -37,7 +36,7 @@ class Row_silo;
 class Row_vll;
 class Row_ww;
 class Row_bamboo;
-class Row_sler;
+class Row_hotspot_friendly;
 //class Row_bamboo_pt;
 class Row_ic3;
 #if CC_ALG == WOUND_WAIT || CC_ALG == WAIT_DIE || CC_ALG == NO_WAIT || CC_ALG == DL_DETECT
@@ -140,8 +139,8 @@ class row_t
 	Row_bamboo * manager;
   #elif CC_ALG == IC3
 	Row_ic3 * manager;
-  #elif CC_ALG == SLER
-	Row_sler * manager;
+  #elif CC_ALG == HOTSPOT_FRIENDLY
+	Row_hotspot_friendly * manager;
 #endif
     char * data;
     table_t * table;

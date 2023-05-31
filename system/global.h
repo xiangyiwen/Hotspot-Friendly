@@ -155,13 +155,13 @@ enum lock_status {LOCK_DROPPED, LOCK_WAITER, LOCK_OWNER, LOCK_RETIRED};
 enum TsType {R_REQ, W_REQ, P_REQ, XP_REQ};
 /* TXN STATUS */
 // XXX(zhihan): bamboo requires the enumeration order to be unchanged
-// SLER: validating[enter validate phase], writing[enter write phase], committing[release dependency]
+// HOTSPOT_FRIENDLY: validating[enter validate phase], writing[enter write phase], committing[release dependency]
 enum status_t: unsigned int {RUNNING, ABORTED, COMMITED, HOLDING, validating, writing, committing};
 
 /* COMMUTATIVE OPERATIONS */
 enum com_t {COM_INC, COM_DEC, COM_NONE};
 
-/* SLER:dependency type */
+/* HOTSPOT_FRIENDLY:dependency type */
 enum DepType {
     INVALID = 0,
     READ_WRITE_ = 1,  /* Binary: 001*/
@@ -177,14 +177,14 @@ enum DepType {
     READ_READ_
 };
 
-/* SLER: return type of pushDependency() */
+/* HOTSPOT_FRIENDLY: return type of pushDependency() */
 //enum bool_dep{
 //    NOT_CONTAIN = 0,
 //    CONTAIN_TXN = 1,
 //    CONTAIN_TXN_AND_TYPE = 2
 //};
 
-/* SLER: addable write_set */
+/* HOTSPOT_FRIENDLY: addable write_set */
 /*
 struct write_set_element {
     //需要增加一个无参数的构造函数，后续使用 write_set_element 来声明一个新的变量时，会用到这个构造函数的

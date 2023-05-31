@@ -29,12 +29,12 @@ RC ycsb_txn_man::run_txn(base_query * query) {
 #if CC_ALG == BAMBOO && (THREAD_CNT != 1)
     int access_id;
     retire_threshold = (uint32_t) floor(m_query->request_cnt * (1 - g_last_retire));
-#elif CC_ALG != SLER
+#elif CC_ALG != HOTSPOT_FRIENDLY
     row_cnt = 0;
 #endif
 
     // 2-27 Optimization for read_only long transaction.
-#if CC_ALG == SLER && READ_ONLY_OPTIMIZATION_ENABLE
+#if CC_ALG == HOTSPOT_FRIENDLY && READ_ONLY_OPTIMIZATION_ENABLE
     is_long = m_query->is_long;
     if(m_query->local_read_perc == 1)
         read_only = true;
@@ -50,8 +50,8 @@ RC ycsb_txn_man::run_txn(base_query * query) {
 
     for (uint32_t rid = 0; rid < m_query->request_cnt; rid ++) {
 
-#if CC_ALG == SLER
-        // SLER: Abort txn actively(before executing next operation)
+#if CC_ALG == HOTSPOT_FRIENDLY
+        // HOTSPOT_FRIENDLY: Abort txn actively(before executing next operation)
         if(this->status == ABORTED){
             rc = Abort;
             goto final;

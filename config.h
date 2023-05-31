@@ -39,9 +39,9 @@
 /***********************************************/
 // Concurrency Control
 /***********************************************/
-// WAIT_DIE, NO_WAIT, DL_DETECT, TIMESTAMP, MVCC, HEKATON, HSTORE, OCC, VLL, TICTOC, SILO, SLER , BAMBOO
+// WAIT_DIE, NO_WAIT, DL_DETECT, TIMESTAMP, MVCC, HEKATON, HSTORE, OCC, VLL, TICTOC, SILO, HOTSPOT_FRIENDLY , BAMBOO
 // TODO TIMESTAMP does not work at this moment
-#define CC_ALG 						SLER
+#define CC_ALG 						HOTSPOT_FRIENDLY
 #define ISOLATION_LEVEL 			SERIALIZABLE
 
 // latch options
@@ -58,7 +58,7 @@
 //#define ABORT_PENALTY               5000
 //#define ABORT_BUFFER_SIZE			1
 #define ABORT_BUFFER_SIZE           1
-// ABORT_BUFFER_ENABLE : All CC need this flag be true except SLER. Otherwise, other CC cannot run TPCC.
+// ABORT_BUFFER_ENABLE : All CC need this flag be true except HOTSPOT_FRIENDLY. Otherwise, other CC cannot run TPCC.
 #define ABORT_BUFFER_ENABLE			true
 // [ INDEX ]
 #define ENABLE_LATCH				false
@@ -283,7 +283,7 @@ extern TestCases					g_test_case;
 #define WOUND_WAIT                  12
 #define BAMBOO                      13
 #define IC3                         14
-#define SLER                        15
+#define HOTSPOT_FRIENDLY                        15
 //Isolation Levels
 #define SERIALIZABLE				1
 #define SNAPSHOT					2
@@ -307,7 +307,7 @@ extern TestCases					g_test_case;
 #define ABORT_OPTIMIZATION          true
 
 #define DEADLOCK_DETECTION          true
-#define SLER_TIMEOUT                false
+#define HOTSPOT_FRIENDLY_TIMEOUT                false
 #define ABORT_WAIT_TIME             0.4
 
 #define VERSION_CHAIN_CONTROL       false

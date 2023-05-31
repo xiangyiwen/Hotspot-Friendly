@@ -22,6 +22,6 @@ INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/benchmarks/ ${PR
 # lib files
 #LINK_DIRECTORIES(${PROJECT_SOURCE_DIR}/libs)
 file(GLOB_RECURSE SRC_FILES benchmarks/*.cpp concurrency_control/*.cpp storage/*.cpp system/*.cpp config.cpp)
-add_executable(rundb ${SRC_FILES} concurrency_control/row_sler.h concurrency_control/row_sler.cpp system/bloom_filter.h concurrency_control/sler.cpp)
+add_executable(rundb ${SRC_FILES} concurrency_control/row_hotspot_friendly.h concurrency_control/row_hotspot_friendly.cpp system/bloom_filter.h concurrency_control/hotspot_friendly.cpp)
 target_link_libraries(rundb libpthread.so libjemalloc.so)
 

@@ -47,8 +47,8 @@ int main(int argc, char* argv[])
 	printf("HEKATON\n");
 #elif CC_ALG == TICTOC
 	printf("TICTOC\n");
-#elif CC_ALG == SLER
-	printf("SLER\n");
+#elif CC_ALG == HOTSPOT_FRIENDLY
+	printf("HOTSPOT_FRIENDLY\n");
 #endif
 	
  
@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
 	} else {
 		((TestWorkload *)m_wl)->summarize();
 
-        // 12-13 Test: SLER has much lower abort rate
+        // 12-13 Test: HOTSPOT_FRIENDLY has much lower abort rate
         /*
         printf("PASS! SimTime = %ld\n", endtime - starttime);
         if (STATS_ENABLE)

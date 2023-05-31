@@ -1,6 +1,6 @@
 #! /bin/bash
 
-cc_name=(SLER)
+cc_name=(HOTSPOT_FRIENDLY)
 
 sed -i '21s/.*/#define WORKLOAD 					TPCC/g' config.h
 sed -i '185s/.*/#define NUM_WH 						1/g' config.h

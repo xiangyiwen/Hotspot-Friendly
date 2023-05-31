@@ -267,7 +267,7 @@ extern TestCases					g_test_case;
 #define WOUND_WAIT                  12
 #define BAMBOO                      13
 #define IC3                         14
-#define SLER                        15
+#define HOTSPOT_FRIENDLY                        15
 //Isolation Levels
 #define SERIALIZABLE				1
 #define SNAPSHOT					2

@@ -3,18 +3,15 @@
 //
 #include "txn.h"
 #include "row.h"
-#include "row_sler.h"
+#include "row_hotspot_friendly.h"
 #include "manager.h"
 #include <mm_malloc.h>
 
 
-#if CC_ALG == SLER
+#if CC_ALG == HOTSPOT_FRIENDLY
 
-RC txn_man::validate_sler(RC rc) {
+RC txn_man::validate_hotspot_friendly(RC rc) {
     uint64_t starttime = get_sys_clock();
-
-    //12-5 Debug
-//    int temp_sem = sler_semaphore;
 
     /**
      * Wait to validate. && Check deadlock again. || Abort myself.
@@ -25,64 +22,13 @@ RC txn_man::validate_sler(RC rc) {
             abort_process(this);
             return Abort;
         }
-        if(sler_semaphore == 0){
+        if(hotspot_friendly_semaphore == 0){
             break;
         }
 
-/*
-        int dp_size = dependency_cnt;
-        //12-6 make sure the workload can finish
-        for(int i = 0; i < sler_dependency.size(); i++) {
-            txn_man *txn_dep = sler_dependency[i].dep_txn;
-            uint64_t origin_txn_id = sler_dependency[i].dep_txn_id;
-            auto type = sler_dependency[i].dep_type;
-            auto j = i;
-
-            auto dep_size= sler_dependency.size();
-
-//            bool a = sler_dependency[i].dep_type == READ_WRITE_;
-
-            if(sler_dependency[i].dep_type == READ_WRITE_){
-                cout << "now_i : " << i << endl;
-
-                cout << endl << "Use for" << endl;
-
-                cout << "a = " << a << endl;
-
-                cout << sler_txn_id <<  "dep_txn: " << sler_dependency[i].dep_txn << endl;
-                cout << sler_txn_id <<  "dep_txn_id: " << sler_dependency[i].dep_txn_id << endl;
-                cout << sler_txn_id <<  "dep_type: " << sler_dependency[i].dep_type << endl;
-                cout << endl << "Use auto" << endl;
-                for(auto & j : sler_dependency){
-                    if(j.dep_type == READ_WRITE_){
-                        cout << endl << "Auto wrong too." << endl;
-                    }
-                    cout << sler_txn_id << "dep_txn: " << j.dep_txn << endl;
-                    cout << sler_txn_id <<  "dep_txn_id: " << j.dep_txn_id << endl;
-                    cout << sler_txn_id <<  "dep_type: " << j.dep_type << endl;
-                }
-
-                auto debug_RW_size = dep_debug.size();
-
-                cout << endl;
-                cout << endl;
-//                assert(false);
-            }
-
-            // DEADLOCK
-            if (WaitingSetContains(txn_dep->sler_txn_id) && txn_dep->WaitingSetContains(sler_txn_id) && txn_dep->status == RUNNING) {
-                if (origin_txn_id == txn_dep->sler_txn_id) {
-                    txn_dep->set_abort();
-                }
-                abort_process(this);
-                return Abort;
-            }
-        }*/
-
-
 #if DEADLOCK_DETECTION
-        //12-6 [Check Deadlock again]: Make sure the workload can finish.
-        for(auto & dep_pair : sler_dependency) {
+        //[Check Deadlock again]: Make sure the workload can finish.
+        for(auto & dep_pair : hotspot_friendly_dependency) {
             if(status == ABORTED){
                 abort_process(this);
                 return Abort;
@@ -92,50 +38,9 @@ RC txn_man::validate_sler(RC rc) {
                 break;
             }
 
-            // 12-12 Debug: There shouldn't appear READ_WRITE_ dependency.
-            /*
-            txn_man *txn_dep = dep_pair.dep_txn;
-            uint64_t origin_txn_id = dep_pair.dep_txn_id;
-            auto type = dep_pair.dep_type;
-
-            auto dep_size= sler_dependency.size();
-
-            if(dep_pair.dep_type == READ_WRITE_){
-                if(dep_pair.dep_type == READ_WRITE_){
-                    cout << endl << "Auto wrong too." << endl;
-                }
-                cout << "First Data." << endl;
-                cout << txn_dep << endl;
-                cout << origin_txn_id << endl;
-                cout << endl;
-
-//                cout << sler_txn_id <<  "    1: dep_type: " << dep_pair.dep_type << endl;
-//                cout << sler_txn_id <<  "    2: dep_type: " << dep_pair.dep_type << endl;
-
-                cout << "Use auto" << endl;
-//                cout << sler_txn_id <<  "    3: dep_type: " << dep_pair.dep_type << endl;
-
-                for(auto & i : sler_dependency){
-//                    cout << sler_txn_id <<  "    4: dep_type: " << dep_pair.dep_type << endl;
-
-                    if(i.dep_type == READ_WRITE_){
-                        cout << endl << "Auto wrong too." << endl;
-                    }
-                    cout << sler_txn_id << "dep_txn: " << i.dep_txn << endl;
-                    cout << sler_txn_id <<  "dep_txn_id: " << i.dep_txn_id << endl;
-                    cout << sler_txn_id <<  "dep_type: " << i.dep_type << endl;
-                }
-
-//                cout << sler_txn_id <<  "    5: dep_type: " << dep_pair.dep_type << endl;
-
-                cout << endl;
-                cout << endl;
-            }
-            */
-
             // DEADLOCK
-            if (WaitingSetContains(dep_pair.dep_txn->sler_txn_id) && dep_pair.dep_txn->WaitingSetContains(sler_txn_id) && dep_pair.dep_txn->status == RUNNING) {
-                if (dep_pair.dep_txn_id == dep_pair.dep_txn->sler_txn_id) {
+            if (WaitingSetContains(dep_pair.dep_txn->hotspot_friendly_txn_id) && dep_pair.dep_txn->WaitingSetContains(hotspot_friendly_txn_id) && dep_pair.dep_txn->status == RUNNING) {
+                if (dep_pair.dep_txn_id == dep_pair.dep_txn->hotspot_friendly_txn_id) {
                     dep_pair.dep_txn->set_abort();
                 }
                 abort_process(this);
@@ -144,18 +49,10 @@ RC txn_man::validate_sler(RC rc) {
         }
 #endif
 
-#if SLER_TIMEOUT
+#if HOTSPOT_FRIENDLY_TIMEOUT
 //         [Timeout]: Make sure the workload can finish.[1 ms(a transaction's average execution time is 0.16ms)]
         uint64_t span = get_sys_clock() - starttime;
-//        if(span > 0.5*1000000UL){
         if(span > ABORT_WAIT_TIME*1000000UL){
-
-//            printf("txn_id: %lu, semaphore: %ld, status: %d, validate_time: %lu\n", sler_txn_id,sler_semaphore,status,span);
-//            printf("semaphore: %ld;\n",sler_semaphore);
-
-//            printf("waiting_list size = %zu, release_cnt = %zu\n",wait_list.size(),dep_debug.size());
-
-
             abort_process(this);
             return Abort;
         }
@@ -166,38 +63,7 @@ RC txn_man::validate_sler(RC rc) {
     /**
      * Update status.
      */
-    /*
-//    while(!ATOM_CAS(status_latch, false, true))
-//        PAUSE
-//    // Abort myself actively  [this shouldn't happen]
-//    if(status == ABORTED){
-//        status_latch = false;
-//        abort_process(this);
-//        return Abort;
-//    }
-//    else if(status == RUNNING){
-//        status = validating;
-//    }
-//    else
-//        assert(false);
-//    status_latch = false;
-   */
-
-    /*
-     * Abort myself actively.
-     * [Theory Impossible]: Shouldn't enter the branch of status == ABORTED.
-     *    These branches can only be entered when semaphore == 0 && status != ABORTED in line 24, which is impossible.
-     *    Because we never aggressively subtract semaphore, which means t.semaphore == 0 only when transactions t depends on are committed(WR/WW/RW) or aborted(RW).
-     * [Actually Possible]: Wrong deadlock detection.
-     *    When t1 accesses an uncommitted tuple version(created by t2) and find that this access will cause deadlock,
-     *    t1 will set t2.status = ABORTED to abort t2. However, the deadlock detection has certain possibility to kill t2 wrongly.
-     *    In the situation where t2 doesn't depend on t1, but t2 is wrongly detected to cause deadlock, t2 may normally process and first reach line 28 with semaphore == 0,
-     *    and then set_abort() by t1 and then reach the following status == ABORTED branches, which make semaphore == 0 && status == ABORTED to be possible.
-     */
     if(status == ABORTED){
-        //2-15 DEBUG
-//        uint64_t temp_semaphore = this->sler_semaphore;         // semaphore == 0
-
         abort_process(this);
         return Abort;
     }
@@ -221,74 +87,32 @@ RC txn_man::validate_sler(RC rc) {
     uint64_t min_next_begin = UINT64_MAX;
     uint64_t serial_id = 0;
 
-    // separate write set from accesses       11-28
+    // separate write set from accesses
     int write_set[wr_cnt];
     int cur_wr_idx = 0;
 
     for(int rid = 0; rid < row_cnt; rid++){
-
         // Caculate serial_ID
         Version* current_version = (Version*)accesses[rid]->tuple_version;
 
-        if(accesses[rid]->type == WR) {          // we record the new version in read_write_set   11-22
+        if(accesses[rid]->type == WR) {          // we record the new version in read_write_set
             current_version = current_version->next;
         }
 
         if(serial_id <= current_version->begin_ts) {
             while(current_version->begin_ts == UINT64_MAX){
-                cout << sler_txn_id << " You should wait!  " << endl;
+                cout << hotspot_friendly_txn_id << " You should wait!  " << endl;
 
 #if DEADLOCK_DETECTION
-                // 12-12 [DEADLOCK FIX]: Since we may subtract the semaphore of a txn too aggressively, the txn may be validated too early. So we have to do one more deadlock check here.
-                for(auto & dep_pair : sler_dependency) {
+                //[DEADLOCK FIX]: Since we may subtract the semaphore of a txn too aggressively, the txn may be validated too early. So we have to do one more deadlock check here.
+                for(auto & dep_pair : hotspot_friendly_dependency) {
                     if(!dep_pair.dep_type){               // we may get an element before it being initialized(empty data / wrong data)
                         break;
                     }
 
-                    // 12-12 Debug: There shouldn't appear READ_WRITE_ dependency.
-                    /*
-                    txn_man *txn_dep = dep_pair.dep_txn;
-                    uint64_t origin_txn_id = dep_pair.dep_txn_id;
-                    auto type = dep_pair.dep_type;
-
-                    auto dep_size= sler_dependency.size();
-
-                    if(dep_pair.dep_type == READ_WRITE_){
-                        if(dep_pair.dep_type == READ_WRITE_){
-                            cout << endl << "Auto wrong too." << endl;
-                        }
-                        cout << "First Data." << endl;
-                        cout << txn_dep << endl;
-                        cout << origin_txn_id << endl;
-                        cout << endl;
-
-        //                cout << sler_txn_id <<  "    1: dep_type: " << dep_pair.dep_type << endl;
-        //                cout << sler_txn_id <<  "    2: dep_type: " << dep_pair.dep_type << endl;
-
-                        cout << "Use auto" << endl;
-        //                cout << sler_txn_id <<  "    3: dep_type: " << dep_pair.dep_type << endl;
-
-                        for(auto & i : sler_dependency){
-        //                    cout << sler_txn_id <<  "    4: dep_type: " << dep_pair.dep_type << endl;
-
-                            if(i.dep_type == READ_WRITE_){
-                                cout << endl << "Auto wrong too." << endl;
-                            }
-                            cout << sler_txn_id << "dep_txn: " << i.dep_txn << endl;
-                            cout << sler_txn_id <<  "dep_txn_id: " << i.dep_txn_id << endl;
-                            cout << sler_txn_id <<  "dep_type: " << i.dep_type << endl;
-                        }
-
-        //                cout << sler_txn_id <<  "    5: dep_type: " << dep_pair.dep_type << endl;
-
-                        cout << endl;
-                        cout << endl;
-                    }
-                    */
-
                     // DEADLOCK
-                    if (WaitingSetContains(dep_pair.dep_txn->sler_txn_id) && dep_pair.dep_txn->WaitingSetContains(sler_txn_id) && dep_pair.dep_txn->status == RUNNING) {
-                        if (dep_pair.dep_txn_id == dep_pair.dep_txn->sler_txn_id) {
+                    if (WaitingSetContains(dep_pair.dep_txn->hotspot_friendly_txn_id) && dep_pair.dep_txn->WaitingSetContains(hotspot_friendly_txn_id) && dep_pair.dep_txn->status == RUNNING) {
+                        if (dep_pair.dep_txn_id == dep_pair.dep_txn->hotspot_friendly_txn_id) {
                             dep_pair.dep_txn->set_abort();
                         }
                         abort_process(this);
@@ -303,7 +127,7 @@ RC txn_man::validate_sler(RC rc) {
         }
 
         if(accesses[rid]->type == WR){
-            write_set[cur_wr_idx ++] = rid;         // 11-28
+            write_set[cur_wr_idx ++] = rid;
             continue;
         }
 
@@ -331,48 +155,13 @@ RC txn_man::validate_sler(RC rc) {
                         // Record RW dependency
 
                         newer_version_txn->SemaphoreAddOne();
-                        //12-6 Debug
-                        /*
-//                        newer_version_txn->PushWaitList(this,sler_txn_id,DepType::READ_WRITE_);
-
-//                        PushDependency(DepType::READ_WRITE_,this,sler_txn_id);      //12-6 Debug
-
-//                        cout << endl << "!!!!! insert_txn: " << this << endl;
-//                        printf("!!!!! insert_txn_id:=%ld\n",sler_txn_id);
-//                        cout << "!!!!!! dep_txn: " << newer_version_txn << endl;
-//                        printf("!!!!! sler_txn_id:=%ld\n",newer_version_txn->get_sler_txn_id());
-//                        cout << "!!!!! sler_txn_id: " << newer_version_txn->get_sler_txn_id() << endl;
-
-                      //  cout << endl << "!!!!!! dep_txn: " << newer_version_txn << "!!!!! sler_txn_id: " << newer_version_txn->get_sler_txn_id() << endl;
-
-                      */
-                        PushDependency(newer_version_txn,newer_version_txn->get_sler_txn_id(),DepType::READ_WRITE_);
-
-                    // Update waiting set [We don't have to do that, meaningless]
-                    /*
-//                    newer_version_txn->UnionWaitingSet(sler_waiting_set);
-//
-//                    //更新依赖链表中所有事务的 waiting_set
-//                    auto deps = newer_version_txn->sler_dependency;
-//                    for(auto dep_pair :deps){
-//                        txn_man* txn_dep = dep_pair.dep_txn;
-//
-//                        txn_dep->UnionWaitingSet(newer_version_txn->sler_waiting_set);
-//                    }
-                        // 11-8 ---------------------------------------------------------------------
-                    */
+                        PushDependency(newer_version_txn,newer_version_txn->get_hotspot_friendly_txn_id(),DepType::READ_WRITE_);
+                        // Update waiting set [We don't have to do that, meaningless]
                     }
                 }
-//                else if(temp_status == writing || temp_status == committing || temp_status == COMMITED){
-//                    // Treat next tuple version as committed(Do nothing here)
-//
-//                    // 2-13: Make sure "COMMITTED" txn won't process too fast that it has already reset newer_version_txn->sler_serial_id = 0.
-//                    assert(newer_version_txn->sler_serial_id != 0);
-//                    min_next_begin = std::min(min_next_begin,newer_version_txn->sler_serial_id);
-//                }
                 else if(temp_status == writing){
-                    // newer_version->begin_ts may not be set, but newer_version_txn->sler_serial_id is already calculated.
-                    min_next_begin = std::min(min_next_begin,newer_version_txn->sler_serial_id);
+                    // newer_version->begin_ts may not be set, but newer_version_txn->hotspot_friendly_serial_id is already calculated.
+                    min_next_begin = std::min(min_next_begin,newer_version_txn->hotspot_friendly_serial_id);
                 }
                 else if(temp_status == committing || temp_status == COMMITED){
                     // Treat next tuple version as committed(Do nothing here)
@@ -387,7 +176,7 @@ RC txn_man::validate_sler(RC rc) {
                     //Todo: maybe we can wait until newer_version_txn commit/abort,but how can it inform me before that thread start next txn
                     /*
                     // abort in advance
-                    if(serial_id >= std::min(min_next_begin,newer_version_txn->sler_serial_id)){
+                    if(serial_id >= std::min(min_next_begin,newer_version_txn->hotspot_friendly_serial_id)){
                         abort_process(this);
                         return Abort;
                     }
@@ -406,8 +195,8 @@ RC txn_man::validate_sler(RC rc) {
                 min_next_begin = std::min(min_next_begin,newer_version->begin_ts);
             }
 
-            // [BUG FIX] : sler_serial_ID may be updated because of RW dependency.
-            if(serial_id >= min_next_begin || this->sler_serial_id >= min_next_begin){
+            // hotspot_friendly_serial_id may be updated because of RW dependency.
+            if(serial_id >= min_next_begin || this->hotspot_friendly_serial_id >= min_next_begin){
                 abort_process(this);
                 return Abort;
             }
@@ -418,9 +207,9 @@ RC txn_man::validate_sler(RC rc) {
     /**
      * Writing phase
      */
-    // [BUG FIX] : sler_serial_ID may be updated because of RW dependency.
-     this->sler_serial_id = max(this->sler_serial_id , serial_id);
-     assert(this->sler_serial_id != 0);
+    // hotspot_friendly_serial_id may be updated because of RW dependency.
+     this->hotspot_friendly_serial_id = max(this->hotspot_friendly_serial_id , serial_id);
+     assert(this->hotspot_friendly_serial_id != 0);
 
      // Update status.
      while(!ATOM_CAS(status_latch, false, true))
@@ -431,11 +220,6 @@ RC txn_man::validate_sler(RC rc) {
      status_latch = false;
 
      for(int rid = 0; rid < wr_cnt; rid++){
-
-         // 11-22: We record new version in read_write_set. [Bug: we should first take the lock, otherwise old_version may be a wrong version]
-//         Version* new_version = (Version*)accesses[write_set[rid]]->tuple_version;
-//         Version* old_version = new_version->next;
-
          while (!ATOM_CAS(accesses[write_set[rid]]->orig_row->manager->blatch, false, true)){
              PAUSE
          }
@@ -445,15 +229,14 @@ RC txn_man::validate_sler(RC rc) {
 
          assert(new_version->begin_ts == UINT64_MAX && new_version->retire == this);
 
-         assert(this->sler_serial_id > old_version->begin_ts);
-         old_version->end_ts = this->sler_serial_id;
-         new_version->begin_ts = this->sler_serial_id;
+         assert(this->hotspot_friendly_serial_id > old_version->begin_ts);
+         old_version->end_ts = this->hotspot_friendly_serial_id;
+         new_version->begin_ts = this->hotspot_friendly_serial_id;
          new_version->retire = nullptr;
-         new_version->retire_ID = 0;                //11-17
+         new_version->retire_ID = 0;
 
 #if VERSION_CHAIN_CONTROL
          //4-3 Restrict the length of version chain. [Subtract the count of uncommitted versions.]
-//         ATOM_SUB(accesses[write_set[rid]]->orig_row->manager->uncommitted_version_count,1);
          accesses[write_set[rid]]->orig_row->manager->DecreaseThreshold();
 #endif
 
@@ -472,39 +255,25 @@ RC txn_man::validate_sler(RC rc) {
      ATOM_CAS(status, writing, committing);
      status_latch = false;
 
-     for(auto & dep_pair :sler_dependency){
-
-         // only inform the txn which wasn't aborted and really depend on me[status == RUNNING]
-//         while(!ATOM_CAS(txn_dep->status_latch, false, true))
-//            PAUSE
-
-        if(dep_pair.dep_txn->status == RUNNING && dep_pair.dep_txn->get_sler_txn_id() == dep_pair.dep_txn_id ){
+     for(auto & dep_pair :hotspot_friendly_dependency){
+        if(dep_pair.dep_txn->status == RUNNING && dep_pair.dep_txn->get_hotspot_friendly_txn_id() == dep_pair.dep_txn_id ){
 
             // if there is a RW dependency
             if(dep_pair.dep_type == READ_WRITE_){
                 uint64_t origin_serial_ID;
                 uint64_t new_serial_ID;
                 do {
-                    origin_serial_ID = dep_pair.dep_txn->sler_serial_id;
-                    new_serial_ID = this->sler_serial_id + 1;
-                } while (origin_serial_ID < new_serial_ID && !ATOM_CAS(dep_pair.dep_txn->sler_serial_id, origin_serial_ID, new_serial_ID));
-
-                //                 // serialize other threads to concurrently modify the serial_ID
-                //                 while(!ATOM_CAS(txn_dep->serial_id_latch, false, true))
-                //                     PAUSE
-                //                     txn_dep->sler_serial_id = max(txn_dep->sler_serial_id, this->sler_serial_id + 1);
-                //                 txn_dep->serial_id_latch = false;
+                    origin_serial_ID = dep_pair.dep_txn->hotspot_friendly_serial_id;
+                    new_serial_ID = this->hotspot_friendly_serial_id + 1;
+                } while (origin_serial_ID < new_serial_ID && !ATOM_CAS(dep_pair.dep_txn->hotspot_friendly_serial_id, origin_serial_ID, new_serial_ID));
             }
 
             dep_pair.dep_txn->SemaphoreSubOne();
         }
 
-//         txn_dep->status_latch = false;
-
-         //12-12 [BUG Fixed] Making concurrent_vector correct
+         // Making concurrent_vector correct
          dep_pair.dep_type = INVALID;
      }
-
 
     // Update status.
     while(!ATOM_CAS(status_latch, false, true))
@@ -536,7 +305,6 @@ void txn_man::abort_process(txn_man * txn){
 
 #if VERSION_CHAIN_CONTROL
             //4-3 Restrict the length of version chain. [Subtract the count of uncommitted versions.]
-//            ATOM_SUB(accesses[rid]->orig_row->manager->uncommitted_version_count,1);
             accesses[rid]->orig_row->manager->DecreaseThreshold();
 #endif
 
@@ -546,11 +314,6 @@ void txn_man::abort_process(txn_man * txn){
             Version* row_header;
 
             assert(new_version->begin_ts == UINT64_MAX && new_version->retire == this);
-
-            /* BUG : Don't get the value of new_version.version_number at first. This value changes all the time, so we should get the value just before we use it or right after we acquire the blatch.
-            uint64_t my_version_chain_number = (new_version->version_number & CHAIN_NUMBER);
-            uint64_t my_version_deep_length = new_version->version_number & DEEP_LENGTH;
-             */
 
             row_header = accesses[rid]->orig_row->manager->get_version_header();
             uint64_t vh_chain = (row_header->version_number & CHAIN_NUMBER) >> 40;
@@ -621,7 +384,7 @@ void txn_man::abort_process(txn_man * txn){
                                 old_version->prev = NULL;
                                 new_version->next = NULL;
 
-                                //3-27 Solution-1:Recursively update the chain_number of uncommitted old version and the first committed verison.
+                                // Recursively update the chain_number of uncommitted old version and the first committed verison.
                                 Version* version_retrieve = accesses[rid]->orig_row->manager->version_header;
 
                                 while(version_retrieve->begin_ts == UINT64_MAX){
@@ -629,14 +392,6 @@ void txn_man::abort_process(txn_man * txn){
 
                                     version_retrieve->version_number += CHAIN_NUMBER_ADD_ONE;
                                     version_retrieve = version_retrieve->next;
-
-                                    /*
-                                    version_retrieve->chain_num += 1;
-                                    assert(version_retrieve->chain_num != 0);
-                                    if((version_retrieve->version_number & CHAIN_NUMBER) == (pow(2,24)-1)){
-                                        printf("Overflow!\n");
-                                    }
-                                    */
                                 }
 
                                 // Update the chain-number of the first committed version.
@@ -661,8 +416,7 @@ void txn_man::abort_process(txn_man * txn){
                                 new_version->prev = NULL;
                                 new_version->next = NULL;
 
-
-                                //3-27 Solution-1:Recursively update the chain_number of uncommitted old version and the first committed verison.
+                                // Recursively update the chain_number of uncommitted old version and the first committed verison.
                                 Version* version_retrieve = accesses[rid]->orig_row->manager->version_header;
 
                                 while(version_retrieve->begin_ts == UINT64_MAX){
@@ -690,13 +444,6 @@ void txn_man::abort_process(txn_man * txn){
                             new_version->prev = NULL;
                             new_version->next = NULL;
                         }
-
-
-                        //        new_version->row->free_row();
-                        //        _mm_free(new_version->row);
-                        //        new_version->row = NULL;
-                        //        _mm_free(new_version->data);
-
 
                         new_version->retire = nullptr;
                         new_version->retire_ID = 0;                //11-17
@@ -731,16 +478,11 @@ void txn_man::abort_process(txn_man * txn){
         }
     }
 #else
-    // 11-28
     if(wr_cnt != 0){
         for(int rid = 0; rid < row_cnt; rid++){
             if(accesses[rid]->type == RD){
                 continue;
             }
-
-            // 11-22: We record new version in read_write_set. [Bug: we should first take the lock, otherwise old_version may be a wrong version]
-//            Version* new_version = (Version*)accesses[rid]->tuple_version;
-//            Version* old_version = new_version->next;
 
             while (!ATOM_CAS(accesses[rid]->orig_row->manager->blatch, false, true)){
                 PAUSE
@@ -788,24 +530,15 @@ void txn_man::abort_process(txn_man * txn){
                 new_version->next = NULL;
             }
 
-
-//        new_version->row->free_row();
-//        _mm_free(new_version->row);
-//        new_version->row = NULL;
-//        _mm_free(new_version->data);
-
-
             new_version->retire = nullptr;
-            new_version->retire_ID = 0;                //11-17
+            new_version->retire_ID = 0;
 
             //TODO: Notice that begin_ts and end_ts of new_version both equal to MAX
-
 
             _mm_free(new_version);
             new_version = NULL;
 
             accesses[rid]->orig_row->manager->blatch = false;
-
         }
     }
 #endif
@@ -814,29 +547,24 @@ void txn_man::abort_process(txn_man * txn){
     /**
      * Cascading abort
      */
-    for(auto & dep_pair :sler_dependency){
+    for(auto & dep_pair :hotspot_friendly_dependency){
 
         // only inform the txn which wasn't aborted
-        if(dep_pair.dep_txn->get_sler_txn_id() == dep_pair.dep_txn_id && dep_pair.dep_txn->status == RUNNING){
+        if(dep_pair.dep_txn->get_hotspot_friendly_txn_id() == dep_pair.dep_txn_id && dep_pair.dep_txn->status == RUNNING){
             if((dep_pair.dep_type == WRITE_WRITE_) || (dep_pair.dep_type == WRITE_READ_)){
                 dep_pair.dep_txn->set_abort(true);
             }
-            else{           //[Fix BUG: 2 threads + 15 ops] Have to release the semaphore of txns who READ_WRITE_ depend on me, otherwise they can never commit and causes deadlock.
+            else{           // Have to release the semaphore of txns who READ_WRITE_ depend on me, otherwise they can never commit and causes deadlock.
                 assert(dep_pair.dep_type == READ_WRITE_);
-                if(dep_pair.dep_txn->get_sler_txn_id() == dep_pair.dep_txn_id && dep_pair.dep_txn->status == RUNNING) {         // Recheck: Don't inform txn_manger who is already running another txn. Otherwise, the semaphore of that txn will be decreased too much.
+                if(dep_pair.dep_txn->get_hotspot_friendly_txn_id() == dep_pair.dep_txn_id && dep_pair.dep_txn->status == RUNNING) {         // Recheck: Don't inform txn_manger who is already running another txn. Otherwise, the semaphore of that txn will be decreased too much.
                     dep_pair.dep_txn->SemaphoreSubOne();
                 }
             }
         }
 
-        //12-12 [BUG Fixed] Making concurrent_vector correct
+        // Making concurrent_vector correct
         dep_pair.dep_type = INVALID;
     }
-
-//    while(!ATOM_CAS(status_latch, false, true))
-//        PAUSE
-//        status = ABORTED;
-//    status_latch = false;
 }
 
 

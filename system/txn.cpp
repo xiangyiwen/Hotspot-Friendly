@@ -12,7 +12,7 @@
 // for info of lock entry
 #include "row_lock.h"
 #include "row_bamboo.h"
-#include "row_sler.h"
+#include "row_hotspot_friendly.h"
 
 void txn_man::init(thread_t * h_thd, workload * h_wl, uint64_t thd_id) {
     this->h_thd = h_thd;
@@ -39,14 +39,14 @@ void txn_man::init(thread_t * h_thd, workload * h_wl, uint64_t thd_id) {
     for (int i = 0; i < MAX_ROW_PER_TXN; i++)
         accesses[i] = NULL;
 
-#if CC_ALG == SLER
+#if CC_ALG == HOTSPOT_FRIENDLY
 //    write_row_cnt = 0;
     //12-6
 //    uncommitted_cnt = 0;
 //    dependency_cnt = 0;
 
-    sler_semaphore = 0;
-    sler_serial_id = 0;
+    hotspot_friendly_semaphore = 0;
+    hotspot_friendly_serial_id = 0;
     status_latch = false;
 //    serial_id_latch = false;
 //    dependency_latch = false;
@@ -54,7 +54,7 @@ void txn_man::init(thread_t * h_thd, workload * h_wl, uint64_t thd_id) {
 //    semaphore_latch = false;
 
     //12-12
-//    sler_dependency = new tbb::concurrent_vector<dep_element>();
+//    hotspot_friendly_dependency = new tbb::concurrent_vector<dep_element>();
 
 #if DEADLOCK_DETECTION
     bloom_parameters parameters;
@@ -71,7 +71,7 @@ void txn_man::init(thread_t * h_thd, workload * h_wl, uint64_t thd_id) {
     parameters.compute_optimal_parameters();
 
     bloom_filter temp_bloom(parameters);
-    sler_waiting_set = temp_bloom;
+    hotspot_friendly_waiting_set = temp_bloom;
 #endif
 
     // 2-27 Optimization for read_only long transaction.
@@ -176,7 +176,7 @@ ts_t txn_man::get_ts() {
 }
 
 void txn_man::cleanup(RC rc) {
-#if CC_ALG == SLER
+#if CC_ALG == HOTSPOT_FRIENDLY
 
     // 12-6
 //    uncommitted_cnt = 0;
@@ -184,19 +184,19 @@ void txn_man::cleanup(RC rc) {
 //    dep_debug.clear();
 //    wait_list.clear();
 
-    sler_txn_id = 0;
-    sler_serial_id = 0;
-    sler_semaphore = 0;
+    hotspot_friendly_txn_id = 0;
+    hotspot_friendly_serial_id = 0;
+    hotspot_friendly_semaphore = 0;
 
-//    auto before_address = sler_dependency;
-//    for(auto & i : sler_dependency) {
+//    auto before_address = hotspot_friendly_dependency;
+//    for(auto & i : hotspot_friendly_dependency) {
 //        i.dep_type = INVALID;
 //    }
-    sler_dependency.clear();
-//    sler_dependency.shrink_to_fit();          // may cause retrieving an uninitialized element(eg. Read_Write),shouldn't call it
+    hotspot_friendly_dependency.clear();
+//    hotspot_friendly_dependency.shrink_to_fit();          // may cause retrieving an uninitialized element(eg. Read_Write),shouldn't call it
 
 #if DEADLOCK_DETECTION
-    sler_waiting_set.clear();
+    hotspot_friendly_waiting_set.clear();
 #endif
 
     row_cnt = 0;
@@ -400,7 +400,7 @@ row_t * txn_man::get_row(row_t * row, access_t type) {
             assign_lock_entry(access);
             access->orig_data = (row_t *) _mm_malloc(sizeof(row_t), 64);
             access->orig_data->init(MAX_TUPLE_SIZE);
-//        #elif CC_ALG == SLER        //[SLER]: we don't need to allocate the space of data
+//        #elif CC_ALG == HOTSPOT_FRIENDLY        //[HOTSPOT_FRIENDLY]: we don't need to allocate the space of data
 //            access->data = (row_t *) _mm_malloc(sizeof(row_t), 64);
 //            access->data->init(MAX_TUPLE_SIZE);
         #endif
@@ -439,7 +439,7 @@ row_t * txn_man::get_row(row_t * row, access_t type) {
         #if !IC3_FIELD_LOCKING
             row->get_row(type, this, row, accesses[row_cnt]);
         #endif
-    #elif CC_ALG == SLER                // Call get_row to actually access the row
+    #elif CC_ALG == HOTSPOT_FRIENDLY                // Call get_row to actually access the row
         rc = row->get_row(type, this, accesses[ row_cnt ]->data, accesses[ row_cnt ]);
         accesses[row_cnt]->orig_row = row;
 
@@ -533,7 +533,7 @@ row_t * txn_man::get_row(row_t * row, access_t type) {
         }
     #elif CC_ALG == IC3
         return accesses[row_cnt - 1]->data;
-    #elif CC_ALG == SLER
+    #elif CC_ALG == HOTSPOT_FRIENDLY
     //        return accesses[row_cnt - 1]->data;
     //        return row;
     auto res_version = (Version*) accesses[row_cnt - 1]->tuple_version;
@@ -636,8 +636,8 @@ RC txn_man::finish(RC rc) {
 #elif CC_ALG == HEKATON
     rc = validate_hekaton(rc);
 	cleanup(rc);
-#elif CC_ALG == SLER
-    rc = validate_sler(rc);
+#elif CC_ALG == HOTSPOT_FRIENDLY
+    rc = validate_hotspot_friendly(rc);
     cleanup(rc);
 #elif CC_ALG == WOUND_WAIT
     if (rc == RCOK) {
@@ -704,7 +704,7 @@ RC txn_man::finish(RC rc) {
 }
 
 void txn_man::release() {
-#if CC_ALG != SLER
+#if CC_ALG != HOTSPOT_FRIENDLY
     for (int i = 0; i < num_accesses_alloc; i++) {
     #if CC_ALG == BAMOO || CC_ALG == NO_WAIT || CC_ALG == WOUND_WAIT || CC_ALG == WAIT_DIE || CC_ALG == DL_DETEC
         delete accesses[i]->lock_entry;

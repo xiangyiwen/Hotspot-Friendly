@@ -14,7 +14,7 @@
 #include "row_vll.h"
 #include "row_ww.h"
 #include "row_bamboo.h"
-#include "row_sler.h"
+#include "row_hotspot_friendly.h"
 //#include "row_bamboo_pt.h"
 #include "row_ic3.h"
 #include "mem_alloc.h"
@@ -82,8 +82,8 @@ void row_t::init_manager(row_t * row) {
   new(manager) Row_bamboo();
 #elif CC_ALG == IC3
   manager = (Row_ic3 *) _mm_malloc(sizeof(Row_ic3), 64);
-#elif CC_ALG == SLER
-  manager = (Row_sler *) _mm_malloc(sizeof(Row_sler), 64);
+#elif CC_ALG == HOTSPOT_FRIENDLY
+  manager = (Row_hotspot_friendly *) _mm_malloc(sizeof(Row_hotspot_friendly), 64);
 #endif
 
 #if CC_ALG != HSTORE
@@ -395,7 +395,7 @@ RC row_t::get_row(access_t type, txn_man * txn, row_t *& row, Access * access) {
     #elif CC_ALG == HSTORE || CC_ALG == VLL
         row = this;
         return rc;
-    #elif CC_ALG == SLER
+    #elif CC_ALG == HOTSPOT_FRIENDLY
         TsType ts_type = (type == RD)? R_REQ : P_REQ;
         rc = this->manager->access(txn, ts_type, access);
 
@@ -405,7 +405,7 @@ RC row_t::get_row(access_t type, txn_man * txn, row_t *& row, Access * access) {
 //            while(rc == WAIT){
 //                uint64_t span = get_sys_clock() - starttime;
 //                if(span > 1000000){
-//                    printf("WAIT txn_id:%lu,time: %lu\n",txn->sler_txn_id,span);
+//                    printf("WAIT txn_id:%lu,time: %lu\n",txn->hotspot_friendly_txn_id,span);
 ////                    return Abort;
 //                }
 //
