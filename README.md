@@ -12,9 +12,11 @@ We compare the performance of six supported protocols across diverse workloads i
 Test Results
 ------------
 The experimental results are attached here (including the configurations for each experiments).
-For results of "Workload With a Single Hotspot", please refer to  Workload_With_a_Single_Hotspot.xlsx file.
-For results of "YCSB", please refer to YCSB_Workload.xlsx file.
-For results of "TPC-C", please refer to  TPC-C_Workload.xlsx file.
+- Workload_With_a_Single_Hotspot.xlsx : the results of "Workload With a Single Hotspot" experiment;
+- YCSB_Workload.xlsx : the results of "YCSB" experiment;
+- TPC-C_Workload.xlsx : the results of "TPC-C" experiment.
+
+
 
 
 Build
