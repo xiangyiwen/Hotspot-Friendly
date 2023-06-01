@@ -5,11 +5,19 @@ Hotspot-Friendly is a multi-version optimistic concurrency control protocol, whi
 The repository is built on an extension of DBx1000: https://github.com/ScarletGuo/Bamboo-Public. We have fixed several bugs inherited from the original DBx1000 implementation.
 
 
+Test Environment
+------------
+We compare the performance of six supported protocols across diverse workloads in a server equipped with an Intel Xeon Gold 5218R CPU (20 physical cores @2.10GHz and 27.5 MiB LLC) and 96 GiB DDR4 DRAM, running Ubuntu 20.04.3 LTS. Each core supports two hardware threads, resulting in a total of 40 threads. Each experiment was repeated five times. The final results are the average of five experimental results. It is important to note that no other background processes should be running during the experiments. 
+
+Test Results
+------------
+The experimental results are attached here (including the configurations for each experiments).
+
 
 Build
 ------------
 
-To build the database.
+To build the system.
 
     cmake -DTBB_DIR=~/tbb/cmake
     cmake -DCMAKE_BUILD_TYPE=Release
@@ -20,7 +28,7 @@ To build the database.
 Run
 ------------
 
-To run the database.
+To run the system.
 
     ./rundb
     
@@ -39,14 +47,4 @@ Extra configuration parameters specific to Hotspot-Friendly include:
     ABORT_WAIT_TIME           : The waiting threshold for the timeout mechanism. (1 means 1ms)
     CC_ALG                    : Concurrency control protocols. Six protocols are supported (NO_WAIT WAIT_DIE TICTOC SILO HOTSPOT_FRIENDLY).
 ```
-
-
-
-Test Environment
-------------
-We compare the performance of six supported protocols across diverse workloads in a server equipped with an Intel Xeon Gold 5218R CPU (20 physical cores @2.10GHz and 27.5 MiB LLC) and 96 GiB DDR4 DRAM, running Ubuntu 20.04.3 LTS. Each core supports two hardware threads, resulting in a total of 40 threads. Each experiment was repeated five times. The final results are the average of five experimental results. It is important to note that no other background processes should be running during the experiments. 
-
-Test Results
-------------
-The experimental results are attached here (including the configurations for each experiments).
 
