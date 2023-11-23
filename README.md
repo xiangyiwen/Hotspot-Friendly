@@ -5,17 +5,25 @@ Hotspot-Friendly is a multi-version optimistic concurrency control protocol, whi
 The repository is built on an extension of DBx1000: https://github.com/ScarletGuo/Bamboo-Public. We have fixed several bugs inherited from the original DBx1000 implementation.
 
 
-Test Environment
+Experiment Environment
 ------------
 We compare the performance of six supported protocols across diverse workloads in a server equipped with an Intel Xeon Gold 5218R CPU (20 physical cores @2.10GHz and 27.5 MiB LLC) and 96 GiB DDR4 DRAM, running Ubuntu 20.04.3 LTS. Each core supports two hardware threads, resulting in a total of 40 threads. Each experiment was repeated five times. The final results are the average of five experimental results. It is important to note that no other background processes should be running during the experiments. 
 
-Test Results
+Experimental Results
 ------------
 The experimental results are attached here (including the configurations for each experiments).
-- Workload_With_a_Single_Hotspot.xlsx : the results of "Workload With a Single Hotspot" experiment;
-- YCSB_Workload.xlsx : the results of "YCSB" experiment;
-- TPC-C_Workload.xlsx : the results of "TPC-C" experiment.
-
+- **Workload With a Single Hotspot:**
+  - 5.2.1 Benefits of Dirty Writes and Dirty Reads (100% hotspot write): https://github.com/xiangyiwen/Hotspot-Friendly/wiki/Workload-With-a-Single-Hotspot---5.2.1(100%25-hotspot-write)
+  - 5.2.1 Benefits of Dirty Writes and Dirty Reads (50% hotspot write): https://github.com/xiangyiwen/Hotspot-Friendly/wiki/Workload-With-a-Single-Hotspot---5.2.1(50%25-hotspot-write)
+  - 5.2.2 Variable Transaction Size: https://github.com/xiangyiwen/Hotspot-Friendly/wiki/Workload-With-a-Single-Hotspot---5.2.2
+  - 5.2.3 Variable Hotspot Position: https://github.com/xiangyiwen/Hotspot-Friendly/wiki/Workload-With-a-Single-Hotspot---5.2.3
+- **YCSB Workload:**
+  - 5.3.1 Read-Intensive Workload: https://github.com/xiangyiwen/Hotspot-Friendly/wiki/YCSB-Workload---5.3.1
+  - 5.3.2 Update-Heavy Workload: https://github.com/xiangyiwen/Hotspot-Friendly/wiki/YCSB-Workload---5.3.2
+  - 5.3.3 Long Read-Only Transaction: https://github.com/xiangyiwen/Hotspot-Friendly/wiki/YCSB-Workload---5.3.3
+- **TPC-C Workload:**
+  - 5.4.1 One Warehouse: https://github.com/xiangyiwen/Hotspot-Friendly/wiki/TPC-C-Workload---5.4.1
+  - 5.4.2 Variable Warehouses: https://github.com/xiangyiwen/Hotspot-Friendly/wiki/TPC-C-Workload---5.4.2
 
 
 
