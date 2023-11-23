@@ -21,7 +21,7 @@ The experimental results are attached here (including the configurations for eac
   - 5.3.1 Read-Intensive Workload: https://github.com/xiangyiwen/Hotspot-Friendly/wiki/YCSB-Workload---5.3.1
   - 5.3.2 Update-Heavy Workload: https://github.com/xiangyiwen/Hotspot-Friendly/wiki/YCSB-Workload---5.3.2
   - 5.3.3 Long Read-Only Transaction: https://github.com/xiangyiwen/Hotspot-Friendly/wiki/YCSB-Workload---5.3.3
-  - 5.3.4 Varying Contention Level: https://github.com/xiangyiwen/Hotspot-Friendly/wiki/YCSB-Workload---5.3.4
+  - 5.3.4 Varying Contention Level: https://github.com/xiangyiwen/Hotspot-Friendly/wiki/YCSB-Workload-5.3.4
 - **TPC-C Workload:**
   - 5.4.1 One Warehouse: https://github.com/xiangyiwen/Hotspot-Friendly/wiki/TPC-C-Workload---5.4.1
   - 5.4.2 Variable Warehouses: https://github.com/xiangyiwen/Hotspot-Friendly/wiki/TPC-C-Workload---5.4.2
